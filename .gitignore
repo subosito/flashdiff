@@ -1,0 +1,13 @@
+# Build artifacts
+/flashdiff
+*.test
+*.out
+
+# Editor / OS
+.DS_Store
+*.swp
+
+# devenv / direnv (local dev environment, not part of the project)
+/.devenv/
+/.direnv/
+devenv.lock
