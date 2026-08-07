@@ -97,7 +97,9 @@ func (m model) renderKeyHints() string {
 // --- body ---
 
 func (m model) renderBody() string {
-	const chromeH = 1 // single bottom status bar (border merges into it)
+	// Chrome: the bottom status bar is 2 rows (its top-border rule + the
+	// status text). Everything above that is body.
+	const chromeH = 2
 	bodyH := m.height - chromeH
 	if bodyH < 3 {
 		bodyH = 3
@@ -106,7 +108,17 @@ func (m model) renderBody() string {
 	filesPane := m.renderFilesPane(bodyH)
 	diffPane := m.renderDiffPane(bodyH)
 
-	divider := m.st.divider.Render(strings.Repeat("│\n", bodyH-1) + "│")
+	// Vertical divider: plain │, crossing the title rule (┼) and meeting
+	// the status bar's top border (┴).
+	div := make([]string, bodyH)
+	for i := range div {
+		div[i] = "│"
+	}
+	if bodyH >= 2 {
+		div[1] = "┼" // title rule row
+	}
+	div[bodyH-1] = "┴"
+	divider := m.st.divider.Render(strings.Join(div, "\n"))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, filesPane, divider, diffPane)
 }
@@ -116,12 +128,13 @@ func (m model) renderFilesPane(h int) string {
 	if q := m.filter.Value(); q != "" {
 		label += m.st.stats.Render(fmt.Sprintf(" (%d/%d)", len(m.visibleChanges()), len(m.changes)))
 	}
-	titleSt := m.st.paneTitle
+	labelSt, ruleSt := m.st.paneTitle, m.st.rule
 	if m.focus == paneFiles {
-		titleSt = m.st.paneTitleOn
+		labelSt, ruleSt = m.st.paneTitleOn, m.st.ruleActive
 	}
-	title := titleSt.Width(m.filesWidth).Render(label)
-	return lipgloss.JoinVertical(lipgloss.Left, title, m.filesVP.View())
+	title := labelSt.Render(label)
+	rule := ruleSt.Render(strings.Repeat("─", m.filesWidth))
+	return lipgloss.JoinVertical(lipgloss.Left, title, rule, m.filesVP.View())
 }
 
 func (m model) renderDiffPane(h int) string {
@@ -141,12 +154,13 @@ func (m model) renderDiffPane(h int) string {
 	}
 
 	diffW := m.width - m.filesWidth - 1
-	titleSt := m.st.paneTitle
+	labelSt, ruleSt := m.st.paneTitle, m.st.rule
 	if m.focus == paneDiff {
-		titleSt = m.st.paneTitleOn
+		labelSt, ruleSt = m.st.paneTitleOn, m.st.ruleActive
 	}
-	title := titleSt.Width(diffW).Render(label)
-	return lipgloss.JoinVertical(lipgloss.Left, title, m.diffVP.View())
+	title := labelSt.Render(label)
+	rule := ruleSt.Render(strings.Repeat("─", diffW))
+	return lipgloss.JoinVertical(lipgloss.Left, title, rule, m.diffVP.View())
 }
 
 // --- file list content ---

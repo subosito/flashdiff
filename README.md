@@ -70,19 +70,22 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
 
 ```
  FILES                      │ DIFF main.go +12 -3 · compact · words
+ ───────────────────────────┼──────────────────────────────────────────
  ● main.go                 M│  12   func main() {
  ✚ internal/new.go         A│  13 -     run()
  ✖ old.txt                 D│  13 +     run(ctx)
                             │  14   }
                             │  ⋮ 96 unchanged lines
+                            ┴
  ──────────────────────────────────────────────────────────────────────
  ◉ flashdiff  /path    128 tracked · 3 changes · last 2s │ tab pane · / filter · ? help · q quit
 ```
 
 The layout is intentionally minimal: pane titles up top (the focused pane's
-title is highlighted, no box borders), and a single **status bar** at the
-bottom — separated from the content by a thin top rule — with the brand and
-watched path on the left and live stats plus a few key hints on the right.
+title is highlighted, no box borders), a rule separates the titles from the
+content, and a single **status bar** at the bottom — set off by a thin top
+rule, no background fill — with the brand and watched path on the left and
+live stats plus a few key hints on the right.
 
 - **Status bar** — a single bottom line: brand + watched path on the left, and
   tracked-file count, total changes, time since last change, and key hints on

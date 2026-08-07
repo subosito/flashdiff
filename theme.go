@@ -73,8 +73,10 @@ type styles struct {
 	headerBrand  lipgloss.Style
 	headerPath   lipgloss.Style
 	stats        lipgloss.Style
-	paneTitle    lipgloss.Style // unfocused pane title (muted underline)
-	paneTitleOn  lipgloss.Style // focused pane title (primary underline)
+	paneTitle    lipgloss.Style // unfocused pane title (muted label)
+	paneTitleOn  lipgloss.Style // focused pane title (primary label)
+	rule         lipgloss.Style // separator under unfocused pane title
+	ruleActive   lipgloss.Style // separator under focused pane title
 	fileRow      lipgloss.Style
 	fileRowSel   lipgloss.Style
 	fileRowNew   lipgloss.Style
@@ -104,21 +106,22 @@ func newStyles(p palette) styles {
 	base := lipgloss.NewStyle().Background(p.bg)
 	return styles{
 		p: p,
-		header: base.
-			Background(p.surface).
+		header: lipgloss.NewStyle().
+			Foreground(p.muted).
+			Border(lipgloss.Border{Top: "─"}, true, false, false, false).
+			BorderForeground(p.border).
 			Padding(0, 1),
 		headerBrand: lipgloss.NewStyle().
-			Background(p.surface).
 			Foreground(p.primary).
 			Bold(true),
 		headerPath: lipgloss.NewStyle().
-			Background(p.surface).
 			Foreground(p.muted),
 		stats: base.
 			Foreground(p.muted).
 			Padding(0, 1),
-		// Pane titles: no border. Focused pane label is bold primary;
-		// unfocused is muted. The vertical divider separates the panes.
+		// Pane titles: plain label row. The focused pane's label is bold
+		// primary; the unfocused pane's is muted. A separator rule is drawn
+		// beneath the titles by the view (see rule / ruleActive).
 		paneTitle: lipgloss.NewStyle().
 			Foreground(p.muted).
 			Padding(0, 1),
@@ -126,6 +129,10 @@ func newStyles(p palette) styles {
 			Foreground(p.primary).
 			Bold(true).
 			Padding(0, 1),
+		rule: lipgloss.NewStyle().
+			Foreground(p.border),
+		ruleActive: lipgloss.NewStyle().
+			Foreground(p.primary),
 		fileRow: base.
 			Foreground(p.text).
 			Padding(0, 1),
