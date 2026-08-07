@@ -71,12 +71,13 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
 ```
  ◉ flashdiff  /path/to/project                       filter: /___
  128 tracked · 3 changes · last 2s ago
- FILES                      │ DIFF main.go +12 -3 · unified · words
+ FILES                      │ DIFF main.go +12 -3 · compact · words
  ───────────────────────────┼──────────────────────────────────────────
  ● main.go                 M│  12   func main() {
  ✚ internal/new.go         A│  13 -     run()
  ✖ old.txt                 D│  13 +     run(ctx)
                             │  14   }
+                            │  ⋮ 96 unchanged lines
  k/↑ up · j/↓ down · tab switch pane · d diff mode · ? help · q quit
 ```
 
@@ -114,13 +115,13 @@ wheel scrolls whichever pane is under the cursor.
 
 ## Diff modes
 
+- **compact** *(default)* — unified, but long runs of unchanged lines collapse
+  into a `⋮ N unchanged lines` marker, so you focus on what changed.
 - **unified** — classic inline `+`/`-` diff with full context.
-- **compact** — unified, but long runs of unchanged lines collapse into a
-  `⋮ N unchanged lines` marker.
 - **split** — side-by-side old (left) vs new (right).
 
-Press `d` to cycle. Press `u` to toggle word-level highlighting, which marks
-the exact tokens that changed within a modified line.
+Press `d` to cycle (compact → unified → split). Press `u` to toggle word-level
+highlighting, which marks the exact tokens that changed within a modified line.
 
 ## How it works
 

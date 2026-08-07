@@ -39,6 +39,19 @@ func (m diffMode) String() string {
 	}
 }
 
+// next cycles diff modes starting from the compact default:
+// compact → unified → split → compact.
+func (m diffMode) next() diffMode {
+	switch m {
+	case modeCompact:
+		return modeUnified
+	case modeUnified:
+		return modeSplit
+	default: // modeSplit
+		return modeCompact
+	}
+}
+
 // change is one observed file modification event.
 type change struct {
 	rel     string
@@ -131,7 +144,7 @@ func newModel(cfg config) (model, error) {
 		help:         help.New(),
 		keys:         newKeyMap(),
 		hl:           newHighlighter(),
-		mode:         modeUnified,
+		mode:         modeCompact,
 		wordDiff:     true,
 		totalScanned: len(snaps),
 		started:      time.Now(),
@@ -397,7 +410,7 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case key.Matches(msg, m.keys.Mode):
-		m.mode = (m.mode + 1) % 3
+		m.mode = m.mode.next()
 		m.syncViews()
 		return m, nil
 
