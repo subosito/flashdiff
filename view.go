@@ -12,66 +12,92 @@ func (m model) View() string {
 	if !m.ready {
 		return "starting…"
 	}
-	header := m.renderHeader()
-	stats := m.renderStats()
 	body := m.renderBody()
-	footer := m.renderFooter()
+	status := m.renderStatusBar()
 
-	out := lipgloss.JoinVertical(lipgloss.Left, header, stats, body, footer)
+	out := lipgloss.JoinVertical(lipgloss.Left, body, status)
 	if m.showHelp {
 		out = m.renderHelpOverlay(out)
 	}
 	return out
 }
 
-// --- header / stats / footer ---
+// renderStatusBar is the single bottom chrome line: brand + path on the
+// left, stats + key hints on the right, separated from the body by a top
+// border. It replaces the former header, stats bar, and footer.
+func (m model) renderStatusBar() string {
+	left := m.st.headerBrand.Render("◉ flashdiff") +
+		m.st.headerPath.Render("  "+m.root)
 
-func (m model) renderHeader() string {
-	brand := m.st.headerBrand.Render("◉ flashdiff")
-	path := m.st.headerPath.Render("  " + m.root)
-	right := ""
+	var rightParts []string
 	if m.filtering || m.filter.Value() != "" {
-		right = m.st.filterPrompt.Render("filter: ") + m.filter.View()
+		rightParts = append(rightParts, m.st.filterPrompt.Render("filter: ")+m.filter.View())
 	}
-	gap := m.width - lipgloss.Width(brand) - lipgloss.Width(path) - lipgloss.Width(right)
+	rightParts = append(rightParts,
+		m.styledStat(fmt.Sprintf("%d", m.totalScanned)+" tracked"),
+		lipgloss.NewStyle().Foreground(m.st.p.add).Render(fmt.Sprintf("%d", m.eventCount))+
+			m.st.headerPath.Render(" changes"),
+	)
+	if !m.lastEvent.IsZero() {
+		ago := time.Since(m.lastEvent).Truncate(time.Second)
+		rightParts = append(rightParts, m.st.headerPath.Render("last ")+
+			lipgloss.NewStyle().Foreground(m.st.p.primary).Render(ago.String()))
+	}
+	sep := m.st.headerPath.Render("  ·  ")
+	right := strings.Join(rightParts, sep)
+
+	// Right side: key hints normally; an apply/cancel hint while filtering.
+	if m.filtering {
+		right += m.st.headerPath.Render("  │  ") +
+			m.st.footerKey.Render("enter") + m.st.footerDesc.Render(" apply  ") +
+			m.st.footerKey.Render("esc") + m.st.footerDesc.Render(" cancel")
+	} else {
+		right += m.st.headerPath.Render("  │  ") + m.renderKeyHints()
+	}
+
+	leftW := lipgloss.Width(left)
+	rightW := lipgloss.Width(right)
+	inner := m.width - 2 // account for header padding
+	if leftW+rightW+1 > inner {
+		// Too wide: drop the root path, keep just the brand.
+		left = m.st.headerBrand.Render("◉ flashdiff")
+		leftW = lipgloss.Width(left)
+	}
+	if leftW+rightW+1 > inner {
+		// Still too wide: drop key hints / extra stats from the right.
+		right = strings.Join(rightParts, sep)
+		rightW = lipgloss.Width(right)
+	}
+	gap := inner - leftW - rightW
 	if gap < 1 {
 		gap = 1
 	}
-	line := brand + path + strings.Repeat(" ", gap) + right
-	return m.st.header.Width(m.width).Render(line)
+	line := left + strings.Repeat(" ", gap) + right
+	return m.st.header.Render(line)
 }
 
-func (m model) renderStats() string {
-	p := m.st.p
-	parts := []string{
-		m.styledStat(fmt.Sprintf("%d", m.totalScanned)+" tracked", 0),
-		lipgloss.NewStyle().Foreground(p.add).Render(fmt.Sprintf("%d", m.eventCount)) +
-			m.st.stats.Render(" changes"),
-	}
-	if !m.lastEvent.IsZero() {
-		ago := time.Since(m.lastEvent).Truncate(time.Second)
-		parts = append(parts, m.st.stats.Render("last ")+
-			lipgloss.NewStyle().Foreground(p.primary).Render(ago.String()+" ago"))
-	}
-	return m.st.stats.Width(m.width).Render(strings.Join(parts, m.st.stats.Render("  ·  ")))
-}
-
-func (m model) styledStat(s string, _ int) string {
+// styledStat colors a stat value with the primary color.
+func (m model) styledStat(s string) string {
 	return lipgloss.NewStyle().Foreground(m.st.p.primary).Render(s)
 }
 
-func (m model) renderFooter() string {
-	if m.filtering {
-		hint := m.st.footerDesc.Render("enter: apply · esc: cancel")
-		return m.st.footer.Width(m.width).Render(m.filter.View() + "  " + hint)
+// renderKeyHints renders the short key help inline (no background).
+func (m model) renderKeyHints() string {
+	var b strings.Builder
+	for i, kb := range m.keys.ShortHelp() {
+		if i > 0 {
+			b.WriteString(m.st.footerDesc.Render("  "))
+		}
+		b.WriteString(m.st.footerKey.Render(kb.Help().Key))
+		b.WriteString(m.st.footerDesc.Render(" " + kb.Help().Desc))
 	}
-	return m.help.View(m.keys)
+	return b.String()
 }
 
 // --- body ---
 
 func (m model) renderBody() string {
-	const chromeH = 3
+	const chromeH = 1 // single bottom status bar (border merges into it)
 	bodyH := m.height - chromeH
 	if bodyH < 3 {
 		bodyH = 3

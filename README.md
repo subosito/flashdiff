@@ -69,30 +69,29 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
 ## Interface
 
 ```
- ◉ flashdiff  /path/to/project                       filter: /___
- 128 tracked · 3 changes · last 2s ago
  FILES                      │ DIFF main.go +12 -3 · compact · words
- ───────────────────────────┼──────────────────────────────────────────
  ● main.go                 M│  12   func main() {
  ✚ internal/new.go         A│  13 -     run()
  ✖ old.txt                 D│  13 +     run(ctx)
                             │  14   }
                             │  ⋮ 96 unchanged lines
- k/↑ up · j/↓ down · tab switch pane · d diff mode · ? help · q quit
+ ──────────────────────────────────────────────────────────────────────
+ ◉ flashdiff  /path    128 tracked · 3 changes · last 2s │ tab pane · / filter · ? help · q quit
 ```
 
-Panes have no box borders — the focused pane is indicated by a colored
-**underline** beneath its title (blue when focused, muted gray when not).
+The layout is intentionally minimal: pane titles up top (the focused pane's
+title is highlighted, no box borders), and a single **status bar** at the
+bottom — separated from the content by a thin top rule — with the brand and
+watched path on the left and live stats plus a few key hints on the right.
 
-- **Header** — brand, the watched path, and the live filter input.
-- **Stats bar** — tracked-file count, total changes, time since last change,
-  uptime, and the selected file's `+adds`/`-dels`.
+- **Status bar** — a single bottom line: brand + watched path on the left, and
+  tracked-file count, total changes, time since last change, and key hints on
+  the right.
 - **FILES** — every changed file, newest first. Icons: `●` modified,
   `✚` new, `✖` deleted, `◆` binary.
 - **DIFF** — the selected file's diff with line numbers, additions in green,
   deletions in red, word-level highlighting, and Catppuccin Mocha syntax
   highlighting on unchanged lines.
-- **Footer** — contextual key hints.
 
 ## Keybindings
 

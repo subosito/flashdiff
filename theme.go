@@ -117,20 +117,15 @@ func newStyles(p palette) styles {
 		stats: base.
 			Foreground(p.muted).
 			Padding(0, 1),
-		// Pane chrome: no box borders. The focused pane is indicated by a
-		// primary-colored title with a primary bottom border (underline
-		// indicator); the unfocused pane uses a muted title + muted rule.
+		// Pane titles: no border. Focused pane label is bold primary;
+		// unfocused is muted. The vertical divider separates the panes.
 		paneTitle: lipgloss.NewStyle().
 			Foreground(p.muted).
-			Padding(0, 1).
-			Border(lipgloss.Border{Bottom: "─"}, false, false, true, false).
-			BorderForeground(p.border),
+			Padding(0, 1),
 		paneTitleOn: lipgloss.NewStyle().
 			Foreground(p.primary).
 			Bold(true).
-			Padding(0, 1).
-			Border(lipgloss.Border{Bottom: "─"}, false, false, true, false).
-			BorderForeground(p.primary),
+			Padding(0, 1),
 		fileRow: base.
 			Foreground(p.text).
 			Padding(0, 1),
@@ -161,15 +156,12 @@ func newStyles(p palette) styles {
 		diffHeader: base.Foreground(p.accent).Bold(true),
 		divider:    base.Foreground(p.border),
 		footer: base.
-			Background(p.surface).
 			Foreground(p.muted).
 			Padding(0, 1),
 		footerKey: lipgloss.NewStyle().
-			Background(p.surface).
 			Foreground(p.primary).
 			Bold(true),
 		footerDesc: lipgloss.NewStyle().
-			Background(p.surface).
 			Foreground(p.muted),
 		empty: base.
 			Foreground(p.muted).

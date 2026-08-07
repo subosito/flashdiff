@@ -306,7 +306,7 @@ func (m *model) layout() {
 	if !m.ready {
 		return
 	}
-	const chromeH = 3 // header + stats + footer
+	const chromeH = 1 // single bottom status bar
 	bodyH := m.height - chromeH
 	if bodyH < 3 {
 		bodyH = 3
@@ -323,9 +323,9 @@ func (m *model) layout() {
 	}
 
 	m.filesVP.Width = m.filesWidth
-	m.filesVP.Height = bodyH - 2 // title row + its underline
+	m.filesVP.Height = bodyH - 1 // title row
 	m.diffVP.Width = diffW
-	m.diffVP.Height = bodyH - 2
+	m.diffVP.Height = bodyH - 1
 	m.help.Width = m.width
 	m.syncViews()
 }

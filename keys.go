@@ -38,7 +38,7 @@ func newKeyMap() keyMap {
 		),
 		Tab: key.NewBinding(
 			key.WithKeys("tab"),
-			key.WithHelp("tab", "switch pane"),
+			key.WithHelp("tab", "pane"),
 		),
 		Enter: key.NewBinding(
 			key.WithKeys("enter", "l"),
@@ -75,9 +75,9 @@ func newKeyMap() keyMap {
 	}
 }
 
-// ShortHelp is the single-row footer binding set.
+// ShortHelp is the minimal set of hints shown in the status bar.
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Up, k.Down, k.Tab, k.Mode, k.Filter, k.Help, k.Quit}
+	return []key.Binding{k.Tab, k.Filter, k.Help, k.Quit}
 }
 
 // FullHelp is the help-overlay column set.
