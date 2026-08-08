@@ -26,7 +26,7 @@ func (m model) View() string {
 // left, stats + key hints on the right, separated from the body by a top
 // border. It replaces the former header, stats bar, and footer.
 func (m model) renderStatusBar() string {
-	left := m.st.headerBrand.Render("◉ flashdiff") +
+	left := m.spinner.View() + m.st.headerBrand.Render(" flashdiff") +
 		m.st.headerPath.Render("  "+m.root)
 
 	var rightParts []string
@@ -40,7 +40,7 @@ func (m model) renderStatusBar() string {
 	)
 	if !m.lastEvent.IsZero() {
 		ago := time.Since(m.lastEvent).Truncate(time.Second)
-		rightParts = append(rightParts, m.st.headerPath.Render("last ")+
+		rightParts = append(rightParts, m.st.headerPath.Render("⧗ ")+
 			lipgloss.NewStyle().Foreground(m.st.p.primary).Render(ago.String()))
 	}
 	sep := m.st.headerPath.Render("  ·  ")
@@ -60,7 +60,7 @@ func (m model) renderStatusBar() string {
 	inner := m.width - 2 // account for header padding
 	if leftW+rightW+1 > inner {
 		// Too wide: drop the root path, keep just the brand.
-		left = m.st.headerBrand.Render("◉ flashdiff")
+		left = m.spinner.View() + m.st.headerBrand.Render(" flashdiff")
 		leftW = lipgloss.Width(left)
 	}
 	if leftW+rightW+1 > inner {
@@ -73,7 +73,16 @@ func (m model) renderStatusBar() string {
 		gap = 1
 	}
 	line := left + strings.Repeat(" ", gap) + right
-	return m.st.header.Render(line)
+
+	// Top rule separating the status bar from the body, with a ┴ junction
+	// where the vertical divider meets it so the two read as one joint.
+	rule := []rune(strings.Repeat("─", m.width))
+	if m.filesWidth >= 0 && m.filesWidth < len(rule) {
+		rule[m.filesWidth] = '┴'
+	}
+	ruleLine := lipgloss.NewStyle().Foreground(m.st.p.border).Render(string(rule))
+
+	return ruleLine + "\n" + m.st.header.Render(line)
 }
 
 // styledStat colors a stat value with the primary color.
@@ -108,8 +117,9 @@ func (m model) renderBody() string {
 	filesPane := m.renderFilesPane(bodyH)
 	diffPane := m.renderDiffPane(bodyH)
 
-	// Vertical divider: plain │, crossing the title rule (┼) and meeting
-	// the status bar's top border (┴).
+	// Vertical divider: plain │ running the full body height, crossing the
+	// title rule (┼). Its bottom end meets the status bar's top rule, which
+	// draws the ┴ junction (see renderStatusBar).
 	div := make([]string, bodyH)
 	for i := range div {
 		div[i] = "│"
@@ -117,7 +127,6 @@ func (m model) renderBody() string {
 	if bodyH >= 2 {
 		div[1] = "┼" // title rule row
 	}
-	div[bodyH-1] = "┴"
 	divider := m.st.divider.Render(strings.Join(div, "\n"))
 
 	return lipgloss.JoinHorizontal(lipgloss.Top, filesPane, divider, diffPane)
@@ -239,7 +248,10 @@ func (m model) renderUnifiedRows(rows []diffRow, width int, rel string) string {
 			numW = n
 		}
 	}
-	contentW := width - numW - 3 // gutter + marker + spaces
+	// Gutter block: right-aligned line number, then a │ rule, then a 1-cell
+	// marker column (+/-/space) kept out of the content itself.
+	sep := m.st.divider.Render("│")
+	contentW := width - numW - 4 // num + space + │ + marker
 
 	var b strings.Builder
 	for i, r := range rows {
@@ -250,7 +262,7 @@ func (m model) renderUnifiedRows(rows []diffRow, width int, rel string) string {
 			b.WriteString(m.st.diffHeader.Render(truncate(r.text, width)))
 			continue
 		}
-		gutter := m.st.gutter.Render(padRight(itoa(r.num), numW))
+		gutter := m.st.gutter.Render(padLeft(itoa(r.num), numW)) + " " + sep
 		textW := contentW
 		var line string
 		switch r.op {
@@ -261,20 +273,22 @@ func (m model) renderUnifiedRows(rows []diffRow, width int, rel string) string {
 		default:
 			line = m.renderContextLine(rel, r.text, textW)
 		}
-		b.WriteString(gutter + " " + line)
+		b.WriteString(gutter + line)
 	}
 	return b.String()
 }
 
 // renderContextLine renders an unchanged line with chroma syntax
-// highlighting when a lexer matches the file; otherwise plain text.
+// highlighting when a lexer matches the file; otherwise plain text. The two
+// leading spaces keep it aligned with the add/del lines: one for the marker
+// column (blank for context), one for the marker/content gap.
 func (m model) renderContextLine(rel, text string, textW int) string {
 	if m.hl != nil {
 		if painted := m.hl.paint(rel, truncate(text, textW)); painted != "" {
-			return " " + painted
+			return "  " + painted
 		}
 	}
-	return m.st.ctxLine.Render(" " + truncate(text, textW))
+	return m.st.ctxLine.Render("  " + truncate(text, textW))
 }
 
 // renderStyledLine renders one add/del row with optional word-level
@@ -305,7 +319,6 @@ func (m model) renderStyledLine(r diffRow, lineSt, wordSt lipgloss.Style, textW 
 	}
 	return sb.String()
 }
-
 func (m model) renderSplitDiff(c change, width int) string {
 	rows := renderSplit(c.diff, m.wordDiff)
 	colW := (width - 1) / 2
@@ -327,14 +340,15 @@ func (m model) renderSplitDiff(c change, width int) string {
 }
 
 func (m model) renderSplitCell(cell *splitCell, colW, numW int, left bool) string {
-	textW := colW - numW - 2
+	sep := m.st.divider.Render("│")
+	textW := colW - numW - 4 // num + space + │ + space
 	if textW < 2 {
 		textW = 2
 	}
 	if cell == nil {
 		return strings.Repeat(" ", colW)
 	}
-	gutter := m.st.gutter.Render(padRight(itoa(cell.num), numW))
+	gutter := m.st.gutter.Render(padLeft(itoa(cell.num), numW)) + " " + sep + " "
 	text := truncate(cell.text, textW)
 	var body string
 	switch cell.op {
@@ -345,7 +359,7 @@ func (m model) renderSplitCell(cell *splitCell, colW, numW int, left bool) strin
 	default:
 		body = m.st.ctxLine.Render(padRight(text, textW))
 	}
-	return gutter + " " + body
+	return gutter + body
 }
 
 func (m model) renderCellText(cell *splitCell, lineSt, wordSt lipgloss.Style, text string, textW int) string {

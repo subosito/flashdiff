@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/help"
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
@@ -87,6 +88,7 @@ type model struct {
 	diffVP  viewport.Model
 	filter  textinput.Model
 	help    help.Model
+	spinner spinner.Model
 	keys    keyMap
 	hl      *highlighter
 
@@ -154,6 +156,13 @@ func newModel(cfg config) (model, error) {
 	m.help.Styles.ShortDesc = m.st.footerDesc
 	m.help.Styles.ShortSeparator = m.st.footerDesc
 
+	// A small "pulse" spinner signals that the watcher is live. It sits in
+	// the status bar where the static brand icon used to be. The default FPS
+	// is a quick flash; slow it down so it reads as a calm pulse.
+	m.spinner = spinner.New(spinner.WithSpinner(spinner.Pulse))
+	m.spinner.Spinner.FPS = time.Millisecond * 350
+	m.spinner.Style = m.spinner.Style.Foreground(p.primary)
+
 	w, err := startWatcher(root, ign, cfg.respectVCS, func(msg fileEventMsg) {
 		select {
 		case m.events <- msg:
@@ -168,7 +177,7 @@ func newModel(cfg config) (model, error) {
 }
 
 func (m model) Init() tea.Cmd {
-	return tea.Batch(m.waitForEvent(), m.tick())
+	return tea.Batch(m.waitForEvent(), m.tick(), m.spinner.Tick)
 }
 
 // waitForEvent blocks until the watcher delivers the next fs event.
@@ -200,6 +209,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tickMsg:
 		return m, m.tick()
+
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 
 	case tea.MouseMsg:
 		return m.handleMouse(msg)

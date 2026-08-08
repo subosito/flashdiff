@@ -330,3 +330,13 @@ func padRight(s string, n int) string {
 	}
 	return s + strings.Repeat(" ", n-w)
 }
+
+// padLeft left-pads s with spaces to width n (used to right-align the
+// line-number gutter).
+func padLeft(s string, n int) string {
+	w := len([]rune(s))
+	if w >= n {
+		return s
+	}
+	return strings.Repeat(" ", n-w) + s
+}

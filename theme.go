@@ -106,10 +106,10 @@ func newStyles(p palette) styles {
 	base := lipgloss.NewStyle().Background(p.bg)
 	return styles{
 		p: p,
+		// The status bar's top rule is drawn manually in renderStatusBar so it
+		// can carry a ┴ junction where the vertical divider meets it.
 		header: lipgloss.NewStyle().
 			Foreground(p.muted).
-			Border(lipgloss.Border{Top: "─"}, true, false, false, false).
-			BorderForeground(p.border).
 			Padding(0, 1),
 		headerBrand: lipgloss.NewStyle().
 			Foreground(p.primary).
