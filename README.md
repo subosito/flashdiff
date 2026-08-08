@@ -1,5 +1,11 @@
 # flashdiff
 
+[![CI](https://github.com/subosito/flashdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/subosito/flashdiff/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/subosito/flashdiff.svg)](https://pkg.go.dev/github.com/subosito/flashdiff)
+[![Go Report Card](https://goreportcard.com/badge/github.com/subosito/flashdiff)](https://goreportcard.com/report/github.com/subosito/flashdiff)
+[![Release](https://img.shields.io/github/v/release/subosito/flashdiff)](https://github.com/subosito/flashdiff/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 **Watch file diffs live in your terminal.** flashdiff is a minimal TUI that
 monitors a directory and shows you a live diff the moment any file is written —
 ideal alongside code generators, formatters, migrations, codemods, and any tool
@@ -143,12 +149,35 @@ placeholder rather than diffed.
 
 ## Development
 
+Requires **Go 1.25+** — that's the only hard dependency.
+
 ```sh
 go build ./...   # build
 go test ./...    # tests
 go vet ./...     # vet
+gofmt -l .       # should print nothing
 ```
+
+`devenv.nix` is provided for contributors who use [devenv](https://devenv.sh),
+but it is entirely optional. Releases are built with
+[GoReleaser](https://goreleaser.com) from git tags.
+
+## Dependency note
+
+flashdiff pins [`github.com/sergi/go-diff`](https://github.com/sergi/go-diff)
+for its diff engine. That repository is no longer actively maintained, but it
+is a pure-Go port of Google's well-tested diff-match-patch algorithm — a
+closed, deterministic algorithm with no network, cgo, or parser attack surface
+— so a frozen version is low-risk. flashdiff uses only its `Diff` API (no Match
+or Patch). If it ever becomes a problem, the intended migration path is the
+zero-dependency [`aymanbagabas/go-udiff`](https://github.com/aymanbagabas/go-udiff).
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
+version: Go 1.25+, `go build`/`go test`/`gofmt` clean, Conventional Commits,
+and focused PRs.
 
 ## License
 
-MIT
+flashdiff is released under the [MIT License](LICENSE).
