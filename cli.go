@@ -31,7 +31,15 @@ Keys:
   q                  quit
 `
 
-var version = "dev"
+// Build metadata, injected via -ldflags at release time (see .goreleaser.yaml).
+// version is the tagged release (e.g. "v1.2.3"); commit and date hold the
+// source revision and build date. All default to "dev"/"" for `go install` and
+// local builds.
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
 
 type config struct {
 	path       string
@@ -75,6 +83,12 @@ func parseArgs(args []string) (config, error) {
 	}
 	if showVersion {
 		fmt.Printf("flashdiff %s\n", version)
+		if commit != "" {
+			fmt.Printf("  commit: %s\n", commit)
+		}
+		if date != "" {
+			fmt.Printf("  built:  %s\n", date)
+		}
 		os.Exit(0)
 	}
 	if fs.NArg() > 1 {
