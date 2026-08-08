@@ -138,19 +138,22 @@ func (m model) renderFilesPane(h int) string {
 }
 
 func (m model) renderDiffPane(h int) string {
-	label := "DIFF"
+	left := "DIFF"
 	if c := m.selectedChange(); c != nil {
 		p := m.st.p
 		adds := lipgloss.NewStyle().Foreground(p.add).Render(fmt.Sprintf("+%d", c.diff.adds))
 		dels := lipgloss.NewStyle().Foreground(p.del).Render(fmt.Sprintf("-%d", c.diff.dels))
-		label += " " + c.rel + " " + adds + " " + dels
+		left += " " + c.rel + " " + adds + " " + dels
 	}
-	label += m.st.stats.Render(fmt.Sprintf("  · %s", m.mode)) +
-		m.st.stats.Render(map[bool]string{true: " · words", false: ""}[m.wordDiff])
-	// scroll position indicator
+
+	// Right-aligned cluster: diff mode, word granularity, scroll position.
+	right := m.mode.String()
+	if m.wordDiff {
+		right += " · words"
+	}
 	if m.diffVP.TotalLineCount() > m.diffVP.Height {
 		pct := int(m.diffVP.ScrollPercent() * 100)
-		label += m.st.stats.Render(fmt.Sprintf("  · %d%%", pct))
+		right += fmt.Sprintf(" · %d%%", pct)
 	}
 
 	diffW := m.width - m.filesWidth - 1
@@ -158,7 +161,17 @@ func (m model) renderDiffPane(h int) string {
 	if m.focus == paneDiff {
 		labelSt, ruleSt = m.st.paneTitleOn, m.st.ruleActive
 	}
-	title := labelSt.Render(label)
+
+	// Balance the title bar: "DIFF …" on the left, the mode cluster pushed
+	// to the right edge of the pane. Fall back to a single space when the
+	// pane is too narrow to hold both.
+	leftR := labelSt.Render(left)
+	rightR := m.st.stats.Render(right)
+	gap := diffW - lipgloss.Width(leftR) - lipgloss.Width(rightR)
+	if gap < 1 {
+		gap = 1
+	}
+	title := leftR + strings.Repeat(" ", gap) + rightR
 	rule := ruleSt.Render(strings.Repeat("─", diffW))
 	return lipgloss.JoinVertical(lipgloss.Left, title, rule, m.diffVP.View())
 }
