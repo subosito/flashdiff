@@ -1,25 +1,35 @@
+<div align="center">
+  <img src="assets/logo.png" width="128" height="128" alt="flashdiff logo" />
+
 # flashdiff
 
 [![CI](https://github.com/subosito/flashdiff/actions/workflows/ci.yml/badge.svg)](https://github.com/subosito/flashdiff/actions/workflows/ci.yml)
-[![Go Reference](https://pkg.go.dev/badge/github.com/subosito/flashdiff.svg)](https://pkg.go.dev/github.com/subosito/flashdiff)
 [![Go Report Card](https://goreportcard.com/badge/github.com/subosito/flashdiff)](https://goreportcard.com/report/github.com/subosito/flashdiff)
 [![Release](https://img.shields.io/github/v/release/subosito/flashdiff)](https://github.com/subosito/flashdiff/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-**Watch file diffs live in your terminal.** flashdiff is a minimal TUI that
-monitors a directory and shows you a live diff the moment any file is written —
-ideal alongside code generators, formatters, migrations, codemods, and any tool
-that rewrites files while you watch.
+**Watch file diffs live in your terminal.**
 
-It complements `git diff`: instead of a post-hoc report, you get an instant
-feedback loop while changes are still happening.
+flashdiff is a minimal TUI that monitors a directory and shows you a live
+diff the moment any file is written — ideal alongside code generators,
+formatters, migrations, codemods, and any tool that rewrites files while
+you watch.
+
+It complements `git diff`: instead of a post-hoc report, you get an
+instant feedback loop while changes are still happening.
 
 Built with [Bubble Tea](https://github.com/charmbracelet/bubbletea),
 [Bubbles](https://github.com/charmbracelet/bubbles), and
 [Lip Gloss](https://github.com/charmbracelet/lipgloss). The theme is
 [Catppuccin Mocha](https://github.com/catppuccin/catppuccin) via
-[Chroma](https://github.com/alecthomas/chroma), which also provides syntax
-highlighting for unchanged lines in the diff view.
+[Chroma](https://github.com/alecthomas/chroma), which also provides
+syntax highlighting for unchanged lines in the diff view.
+
+</div>
+
+---
+
+![flashdiff showing a live diff in the terminal](assets/screenshot.png)
 
 ---
 
@@ -75,32 +85,36 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
 ## Interface
 
 ```
- FILES                      │ DIFF main.go +12 -3 · compact · words
+ FILES                      │ DIFF main.go +12 -3            compact · words
  ───────────────────────────┼──────────────────────────────────────────
- ● main.go                 M│  12   func main() {
- ✚ internal/new.go         A│  13 -     run()
- ✖ old.txt                 D│  13 +     run(ctx)
-                            │  14   }
+ ● main.go                 M│ 12 │   func main() {
+ ✚ internal/new.go         A│ 13 │ -     run()
+ ✖ old.txt                 D│ 13 │ +     run(ctx)
+                            │ 14 │   }
                             │  ⋮ 96 unchanged lines
-                            ┴
- ──────────────────────────────────────────────────────────────────────
- ◉ flashdiff  /path    128 tracked · 3 changes · last 2s │ tab pane · / filter · ? help · q quit
+                            │
+ ───────────────────────────┴──────────────────────────────────────────
+ ▒ flashdiff  /path    128 tracked  ·  3 changes  ·  ⧗ 2s  │  tab pane  / filter  ? help  q quit
 ```
 
 The layout is intentionally minimal: pane titles up top (the focused pane's
 title is highlighted, no box borders), a rule separates the titles from the
 content, and a single **status bar** at the bottom — set off by a thin top
 rule, no background fill — with the brand and watched path on the left and
-live stats plus a few key hints on the right.
+live stats plus a few key hints on the right. The vertical divider crosses
+the title rule (`┼`) and meets the status bar in a single `┴` joint.
 
-- **Status bar** — a single bottom line: brand + watched path on the left, and
-  tracked-file count, total changes, time since last change, and key hints on
-  the right.
+- **Status bar** — a single bottom line. On the left, a pulsing indicator
+  (the watcher is live) plus the brand and watched path; on the right, the
+  tracked-file count, total changes, time since the last change (`⧗`), and
+  key hints.
 - **FILES** — every changed file, newest first. Icons: `●` modified,
   `✚` new, `✖` deleted, `◆` binary.
-- **DIFF** — the selected file's diff with line numbers, additions in green,
-  deletions in red, word-level highlighting, and Catppuccin Mocha syntax
-  highlighting on unchanged lines.
+- **DIFF** — the selected file's diff. Line numbers sit in their own gutter,
+  separated from the content by a thin `│` rule. The diff mode and word
+  granularity (`compact · words`) are right-aligned in the title. Additions
+  are green, deletions red, with word-level highlighting and Catppuccin
+  Mocha syntax highlighting on unchanged lines.
 
 ## Keybindings
 
