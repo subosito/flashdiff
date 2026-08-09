@@ -41,7 +41,7 @@ func startWatcher(root string, ign *ignoreSet, respectVCS bool, send func(fileEv
 	}
 	vcs, err := loadIgnorer(root, respectVCS)
 	if err != nil {
-		fsn.Close()
+		_ = fsn.Close()
 		return nil, err
 	}
 	w := &watcher{
@@ -54,7 +54,7 @@ func startWatcher(root string, ign *ignoreSet, respectVCS bool, send func(fileEv
 		pending: make(map[string]bool),
 	}
 	if err := w.addDirs(root); err != nil {
-		fsn.Close()
+		_ = fsn.Close()
 		return nil, err
 	}
 	go w.loop()
@@ -113,7 +113,7 @@ func (w *watcher) handle(ev fsnotify.Event) {
 	if ev.Has(fsnotify.Create) {
 		if info, err := os.Stat(ev.Name); err == nil && info.IsDir() {
 			if !defaultSkips[info.Name()] && !w.ign.ignored(rel) && !w.vcs.ignored(rel, true) {
-				w.addDirs(ev.Name)
+				_ = w.addDirs(ev.Name)
 			}
 			return
 		}
@@ -157,5 +157,5 @@ func (w *watcher) close() {
 		w.debounce.Stop()
 	}
 	w.mu.Unlock()
-	w.fsn.Close()
+	_ = w.fsn.Close()
 }

@@ -57,7 +57,9 @@ func (ig *ignorer) loadFile(root, path string) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 
 	rel, err := filepath.Rel(root, filepath.Dir(path))
 	if err != nil {
