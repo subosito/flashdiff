@@ -140,6 +140,9 @@ func scan(root string, ignores *ignoreSet, respectVCS bool) (map[string]snapshot
 			return filepath.SkipAll
 		}
 		content, binary, rerr := readFile(path)
+		if rerr == nil && binary {
+			return nil // skip binary files; they aren't diffable
+		}
 		if rerr == nil {
 			snaps[rel] = snapshot{content: content, binary: binary}
 		}

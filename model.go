@@ -251,6 +251,10 @@ func (m *model) applyFileEvent(ev fileEventMsg) {
 		}
 		return
 	}
+	// Skip binary files: they aren't diffable and would only add noise.
+	if binary {
+		return
+	}
 	old, existed := m.store.get(ev.rel)
 	if existed && old.binary == binary && old.content == content {
 		return // no effective change (e.g. touch with same content)
