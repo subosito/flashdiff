@@ -1,9 +1,11 @@
 package main
 
 import (
+	"image/color"
+
+	"charm.land/lipgloss/v2"
 	"github.com/alecthomas/chroma/v2"
 	chromastyles "github.com/alecthomas/chroma/v2/styles"
-	"github.com/charmbracelet/lipgloss"
 )
 
 // ThemeName is the chroma style the palette and syntax highlighting are
@@ -33,31 +35,31 @@ var knownThemes = map[string]bool{
 // palette is the single source of truth for colors. It is derived from
 // the chroma catppuccin-mocha style so the TUI matches that theme.
 type palette struct {
-	bg       lipgloss.Color // base
-	surface  lipgloss.Color // surface0/1
-	border   lipgloss.Color // surface2
-	borderHi lipgloss.Color // overlay0
-	primary  lipgloss.Color // blue (was keyword mauve accents)
-	accent   lipgloss.Color // mauve
-	text     lipgloss.Color // text
-	muted    lipgloss.Color // overlay1 (comments)
-	add      lipgloss.Color // green
-	addBg    lipgloss.Color // green on surface
-	del      lipgloss.Color // red
-	delBg    lipgloss.Color // red on surface
-	warn     lipgloss.Color // peach
+	bg       color.Color // base
+	surface  color.Color // surface0/1
+	border   color.Color // surface2
+	borderHi color.Color // overlay0
+	primary  color.Color // blue (was keyword mauve accents)
+	accent   color.Color // mauve
+	text     color.Color // text
+	muted    color.Color // overlay1 (comments)
+	add      color.Color // green
+	addBg    color.Color // green on surface
+	del      color.Color // red
+	delBg    color.Color // red on surface
+	warn     color.Color // peach
 }
 
 // chromaColor resolves a token's foreground color from the style,
 // falling back to the provided default when unset.
-func chromaColor(st *chroma.Style, tok chroma.TokenType, def string) lipgloss.Color {
+func chromaColor(st *chroma.Style, tok chroma.TokenType, def string) color.Color {
 	if e := st.Get(tok); e.Colour.IsSet() {
 		return lipgloss.Color(e.Colour.String())
 	}
 	return lipgloss.Color(def)
 }
 
-func chromaBg(st *chroma.Style, def string) lipgloss.Color {
+func chromaBg(st *chroma.Style, def string) color.Color {
 	if e := st.Get(chroma.Background); e.Background.IsSet() {
 		return lipgloss.Color(e.Background.String())
 	}

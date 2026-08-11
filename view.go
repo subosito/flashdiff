@@ -5,21 +5,25 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/lipgloss"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
-func (m model) View() string {
-	if !m.ready {
-		return "starting…"
+func (m model) View() tea.View {
+	content := "starting…"
+	if m.ready {
+		body := m.renderBody()
+		status := m.renderStatusBar()
+		content = lipgloss.JoinVertical(lipgloss.Left, body, status)
+		if m.showHelp {
+			content = m.renderHelpOverlay(content)
+		}
 	}
-	body := m.renderBody()
-	status := m.renderStatusBar()
-
-	out := lipgloss.JoinVertical(lipgloss.Left, body, status)
-	if m.showHelp {
-		out = m.renderHelpOverlay(out)
-	}
-	return out
+	v := tea.NewView(content)
+	v.AltScreen = true
+	// Enable mouse cell motion so drag/click/wheel work like v1 WithMouseCellMotion.
+	v.MouseMode = tea.MouseModeCellMotion
+	return v
 }
 
 // renderStatusBar is the single bottom chrome line: brand + path on the
@@ -160,7 +164,7 @@ func (m model) renderDiffPane(h int) string {
 	if m.wordDiff {
 		right += " · words"
 	}
-	if m.diffVP.TotalLineCount() > m.diffVP.Height {
+	if m.diffVP.TotalLineCount() > m.diffVP.Height() {
 		pct := int(m.diffVP.ScrollPercent() * 100)
 		right += fmt.Sprintf(" · %d%%", pct)
 	}

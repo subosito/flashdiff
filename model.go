@@ -6,12 +6,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/charmbracelet/bubbles/help"
-	"github.com/charmbracelet/bubbles/key"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	"github.com/charmbracelet/bubbles/viewport"
-	tea "github.com/charmbracelet/bubbletea"
+	"charm.land/bubbles/v2/help"
+	"charm.land/bubbles/v2/key"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	"charm.land/bubbles/v2/viewport"
+	tea "charm.land/bubbletea/v2"
 )
 
 type pane int
@@ -218,10 +218,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.spinner, cmd = m.spinner.Update(msg)
 		return m, cmd
 
-	case tea.MouseMsg:
+	case tea.MouseClickMsg, tea.MouseReleaseMsg, tea.MouseMotionMsg, tea.MouseWheelMsg:
 		return m.handleMouse(msg)
 
-	case tea.KeyMsg:
+	case tea.KeyPressMsg:
 		return m.handleKey(msg)
 	}
 	return m, nil
@@ -342,11 +342,11 @@ func (m *model) layout() {
 		diffW = 20
 	}
 
-	m.filesVP.Width = m.filesWidth
-	m.filesVP.Height = bodyH - 2 // title row + its separator
-	m.diffVP.Width = diffW
-	m.diffVP.Height = bodyH - 2
-	m.help.Width = m.width
+	m.filesVP.SetWidth(m.filesWidth)
+	m.filesVP.SetHeight(bodyH - 2) // title row + its separator
+	m.diffVP.SetWidth(diffW)
+	m.diffVP.SetHeight(bodyH - 2)
+	m.help.SetWidth(m.width)
 	m.syncViews()
 }
 
@@ -355,28 +355,28 @@ func (m *model) syncViews() {
 	if !m.ready {
 		return
 	}
-	m.filesVP.SetContent(m.renderFileList(m.filesVP.Width))
-	m.diffVP.SetContent(m.renderDiff(m.diffVP.Width))
+	m.filesVP.SetContent(m.renderFileList(m.filesVP.Width()))
+	m.diffVP.SetContent(m.renderDiff(m.diffVP.Width()))
 	m.ensureSelectionVisible()
 }
 
 // selectionChanged re-renders and resets the diff scroll to the top,
 // used whenever the user moves the file selection.
 func (m *model) selectionChanged() {
-	m.diffVP.YOffset = 0
+	m.diffVP.SetYOffset(0)
 	m.syncViews()
 }
 
 func (m *model) ensureSelectionVisible() {
-	if m.selected < m.filesVP.YOffset {
-		m.filesVP.YOffset = m.selected
+	if m.selected < m.filesVP.YOffset() {
+		m.filesVP.SetYOffset(m.selected)
 	}
-	if bottom := m.filesVP.YOffset + m.filesVP.Height - 1; m.selected > bottom {
-		m.filesVP.YOffset = m.selected - m.filesVP.Height + 1
+	if bottom := m.filesVP.YOffset() + m.filesVP.Height() - 1; m.selected > bottom {
+		m.filesVP.SetYOffset(m.selected - m.filesVP.Height() + 1)
 	}
 }
 
-func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	if m.filtering {
 		switch msg.String() {
 		case "enter":
@@ -496,24 +496,23 @@ func (m model) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (m model) handleMouse(msg tea.Msg) (tea.Model, tea.Cmd) {
 	dividerX := m.filesWidth // 0-based column of the divider
-	switch msg.Button {
-	case tea.MouseButtonLeft:
-		if msg.Action == tea.MouseActionMotion {
-			if m.dragging {
-				m.filesWidth = msg.X + 1
-				m.layout()
-			}
-			return m, nil
+	switch msg := msg.(type) {
+	case tea.MouseMotionMsg:
+		if m.dragging {
+			m.filesWidth = msg.X + 1
+			m.layout()
 		}
-		if msg.Action == tea.MouseActionPress {
+		return m, nil
+	case tea.MouseClickMsg:
+		if msg.Button == tea.MouseLeft {
 			if msg.X >= dividerX-1 && msg.X <= dividerX+1 && msg.Y > 2 {
 				m.dragging = true
 				return m, nil
 			}
 			if msg.X < m.filesWidth && msg.Y >= 4 {
-				row := msg.Y - 4 + m.filesVP.YOffset
+				row := msg.Y - 4 + m.filesVP.YOffset()
 				if row >= 0 && row < len(m.visibleChanges()) {
 					m.selected = row
 					m.focus = paneFiles
@@ -521,10 +520,11 @@ func (m model) handleMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
 				}
 			}
 		}
-		if msg.Action == tea.MouseActionRelease {
-			m.dragging = false
-		}
-	case tea.MouseButtonWheelUp, tea.MouseButtonWheelDown:
+		return m, nil
+	case tea.MouseReleaseMsg:
+		m.dragging = false
+		return m, nil
+	case tea.MouseWheelMsg:
 		if msg.X < m.filesWidth {
 			var cmd tea.Cmd
 			m.filesVP, cmd = m.filesVP.Update(msg)

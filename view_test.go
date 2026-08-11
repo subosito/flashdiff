@@ -33,8 +33,8 @@ func newTestModel() model {
 // with ANSI escape codes stripped.
 func renderRows(rows []diffRow, width int) []string {
 	m := newTestModel()
-	m.diffVP.Width = width
-	m.diffVP.Height = 40
+	m.diffVP.SetWidth(width)
+	m.diffVP.SetHeight(40)
 	out := m.renderUnifiedRows(rows, width, "test.go")
 	lines := strings.Split(out, "\n")
 	for i, l := range lines {
