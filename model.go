@@ -280,7 +280,10 @@ func (m *model) bumpEvent() {
 }
 
 // upsertChange inserts or replaces the entry for c.rel, keeping the
-// list newest-first, and selects it.
+// list newest-first. Text changes always become the selection so the live
+// diff stays on source. Binary changes only steal focus when nothing is
+// selected or the current selection is already a binary — they live in a
+// separate FILES segment and should not yank attention away from text.
 func (m *model) upsertChange(c *change) {
 	for i, ex := range m.changes {
 		if ex.rel == c.rel {
@@ -289,27 +292,65 @@ func (m *model) upsertChange(c *change) {
 		}
 	}
 	m.changes = append([]*change{c}, m.changes...)
-	for i, ex := range m.visibleChanges() {
-		if ex.rel == c.rel {
-			m.selected = i
-			break
+
+	cur := m.selectedChange()
+	steal := !c.binary || cur == nil || cur.binary
+	if steal {
+		for i, ex := range m.visibleChanges() {
+			if ex.rel == c.rel {
+				m.selected = i
+				break
+			}
 		}
+	} else if n := len(m.visibleChanges()); m.selected >= n {
+		m.selected = max(0, n-1)
 	}
 	m.syncViews()
 }
 
-// visibleChanges applies the filter query to the change list.
-func (m *model) visibleChanges() []*change {
+// matchFilter reports whether rel passes the current filter query.
+func (m *model) matchFilter(rel string) bool {
 	q := strings.TrimSpace(strings.ToLower(m.filter.Value()))
 	if q == "" {
-		return m.changes
+		return true
 	}
+	return strings.Contains(strings.ToLower(rel), q)
+}
+
+// visibleTextChanges is the primary FILES list: non-binary changes only.
+func (m *model) visibleTextChanges() []*change {
 	var out []*change
 	for _, c := range m.changes {
-		if strings.Contains(strings.ToLower(c.rel), q) {
+		if !c.binary && m.matchFilter(c.rel) {
 			out = append(out, c)
 		}
 	}
+	return out
+}
+
+// visibleBinaryChanges is the dedicated BINARIES segment under FILES.
+func (m *model) visibleBinaryChanges() []*change {
+	var out []*change
+	for _, c := range m.changes {
+		if c.binary && m.matchFilter(c.rel) {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// visibleChanges is text then binaries — the flat order used for selection
+// and keyboard navigation. The renderer inserts a section header between
+// the two groups; headers are not selectable.
+func (m *model) visibleChanges() []*change {
+	text := m.visibleTextChanges()
+	bins := m.visibleBinaryChanges()
+	if len(bins) == 0 {
+		return text
+	}
+	out := make([]*change, 0, len(text)+len(bins))
+	out = append(out, text...)
+	out = append(out, bins...)
 	return out
 }
 
@@ -368,11 +409,18 @@ func (m *model) selectionChanged() {
 }
 
 func (m *model) ensureSelectionVisible() {
-	if m.selected < m.filesVP.YOffset() {
-		m.filesVP.SetYOffset(m.selected)
+	// Visual row accounts for the non-selectable BINARIES header. The header
+	// is shown whenever any binary is listed (even if there is no text group).
+	textN := len(m.visibleTextChanges())
+	visRow := m.selected
+	if len(m.visibleBinaryChanges()) > 0 && m.selected >= textN {
+		visRow = m.selected + 1
 	}
-	if bottom := m.filesVP.YOffset() + m.filesVP.Height() - 1; m.selected > bottom {
-		m.filesVP.SetYOffset(m.selected - m.filesVP.Height() + 1)
+	if visRow < m.filesVP.YOffset() {
+		m.filesVP.SetYOffset(visRow)
+	}
+	if bottom := m.filesVP.YOffset() + m.filesVP.Height() - 1; visRow > bottom {
+		m.filesVP.SetYOffset(visRow - m.filesVP.Height() + 1)
 	}
 }
 
@@ -512,9 +560,23 @@ func (m model) handleMouse(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			if msg.X < m.filesWidth && msg.Y >= 4 {
+				// Map viewport row -> selection index, skipping the
+				// non-selectable "BINARIES" header when present.
 				row := msg.Y - 4 + m.filesVP.YOffset()
-				if row >= 0 && row < len(m.visibleChanges()) {
-					m.selected = row
+				textN := len(m.visibleTextChanges())
+				binsN := len(m.visibleBinaryChanges())
+				sel := -1
+				if row >= 0 && row < textN {
+					sel = row
+				} else if binsN > 0 {
+					// text rows, then 1 header row, then binary rows
+					binRow := row - textN - 1
+					if binRow >= 0 && binRow < binsN {
+						sel = textN + binRow
+					}
+				}
+				if sel >= 0 {
+					m.selected = sel
 					m.focus = paneFiles
 					m.syncViews()
 				}

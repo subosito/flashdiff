@@ -192,20 +192,38 @@ func (m model) renderDiffPane(h int) string {
 // --- file list content ---
 
 func (m model) renderFileList(width int) string {
-	vis := m.visibleChanges()
-	if len(vis) == 0 {
+	text := m.visibleTextChanges()
+	bins := m.visibleBinaryChanges()
+	if len(text) == 0 && len(bins) == 0 {
 		msg := "◌ watching for changes…"
 		if m.filter.Value() != "" {
 			msg = "no files match the filter"
 		}
 		return m.st.empty.Width(width).Render(msg)
 	}
+
 	var b strings.Builder
-	for i, c := range vis {
-		if i > 0 {
+	// Flat selection index: text[0..n) then bins[0..m). A section header
+	// is rendered between the groups and is not selectable.
+	idx := 0
+	for _, c := range text {
+		if idx > 0 {
 			b.WriteByte('\n')
 		}
-		b.WriteString(m.renderFileRow(c, i == m.selected, width))
+		b.WriteString(m.renderFileRow(c, idx == m.selected, width))
+		idx++
+	}
+	if len(bins) > 0 {
+		if idx > 0 {
+			b.WriteByte('\n')
+		}
+		label := fmt.Sprintf("BINARIES (%d)", len(bins))
+		b.WriteString(m.st.gutter.Render(padRight(label, width)))
+		for _, c := range bins {
+			b.WriteByte('\n')
+			b.WriteString(m.renderFileRow(c, idx == m.selected, width))
+			idx++
+		}
 	}
 	return b.String()
 }

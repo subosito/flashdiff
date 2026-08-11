@@ -223,3 +223,20 @@ func TestIsBinary(t *testing.T) {
 		t.Error("plain text should not be binary")
 	}
 }
+
+func TestDefaultExcludesTempJunk(t *testing.T) {
+	s := newIgnoreSet(nil, nil)
+	for _, p := range []string{
+		"foo.tmp", "nested/x.swp", "a.bak", "dir/file~",
+		"sedAb12cd", "nested/sedXYZ99",
+	} {
+		if !s.ignored(p) {
+			t.Errorf("%q should be ignored by default excludes", p)
+		}
+	}
+	for _, p := range []string{"main.go", "sed.go", "README.md", "cmd/sed/main.go"} {
+		if s.ignored(p) {
+			t.Errorf("%q must NOT be ignored by default excludes", p)
+		}
+	}
+}

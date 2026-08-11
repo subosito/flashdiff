@@ -30,7 +30,24 @@ type ignoreSet struct {
 }
 
 func newIgnoreSet(includes, excludes []string) *ignoreSet {
-	return &ignoreSet{includes: includes, excludes: excludes}
+	// Default excludes drop editor/temp junk that is almost never worth
+	// watching (sed in-place temps, vim/emacs swap, OS junk). User -e
+	// patterns append after these. Bare names match any path segment.
+	defaults := []string{
+		"*~",
+		"*.swp",
+		"*.swo",
+		"*.tmp",
+		"*.temp",
+		"*.orig",
+		"*.rej",
+		"*.bak",
+		// GNU sed -i leaves sedXXXXXX temps (alphanumeric suffix, no dot).
+		// Keep this tighter than "sed*" so real files like sed.go are kept.
+		"sed[A-Za-z0-9][A-Za-z0-9]*",
+	}
+	all := append(append([]string{}, defaults...), excludes...)
+	return &ignoreSet{includes: includes, excludes: all}
 }
 
 // dirSkippedByInclude reports whether a directory cannot contain any

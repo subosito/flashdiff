@@ -188,3 +188,56 @@ func TestThemeValidation(t *testing.T) {
 		t.Error("nonexistent theme should not be known")
 	}
 }
+
+func TestVisibleChangesSplitsBinary(t *testing.T) {
+	m := newTestModel()
+	m.changes = []*change{
+		{rel: "a.go", binary: false},
+		{rel: "bin", binary: true},
+		{rel: "b.txt", binary: false},
+		{rel: "app", binary: true},
+	}
+	text := m.visibleTextChanges()
+	bins := m.visibleBinaryChanges()
+	if len(text) != 2 || len(bins) != 2 {
+		t.Fatalf("text=%d bins=%d, want 2/2", len(text), len(bins))
+	}
+	vis := m.visibleChanges()
+	// text first, then binaries
+	if vis[0].rel != "a.go" || vis[1].rel != "b.txt" {
+		t.Fatalf("text order wrong: %v %v", vis[0].rel, vis[1].rel)
+	}
+	if vis[2].rel != "bin" || vis[3].rel != "app" {
+		t.Fatalf("bin order wrong: %v %v", vis[2].rel, vis[3].rel)
+	}
+
+	// File list should contain a BINARIES header between groups.
+	out := stripANSI(m.renderFileList(40))
+	if !strings.Contains(out, "BINARIES (2)") {
+		t.Fatalf("missing BINARIES header: %q", out)
+	}
+	// Header should appear after text files and before binary names.
+	iText := strings.Index(out, "a.go")
+	iHdr := strings.Index(out, "BINARIES")
+	iBin := strings.Index(out, "bin")
+	if iText < 0 || iHdr <= iText || iBin <= iHdr {
+		t.Fatalf("expected text < header < binary order, got %d %d %d\n%s", iText, iHdr, iBin, out)
+	}
+}
+
+func TestBinaryDoesNotStealTextSelection(t *testing.T) {
+	m := newTestModel()
+	m.upsertChange(&change{rel: "src.go", binary: false})
+	if m.selectedChange() == nil || m.selectedChange().rel != "src.go" {
+		t.Fatalf("expected src.go selected")
+	}
+	m.upsertChange(&change{rel: "out", binary: true})
+	// Text selection should stick.
+	if c := m.selectedChange(); c == nil || c.rel != "src.go" {
+		t.Fatalf("binary stole selection: got %v", c)
+	}
+	// Binary still listed.
+	if len(m.visibleBinaryChanges()) != 1 {
+		t.Fatalf("expected 1 binary change")
+	}
+}
