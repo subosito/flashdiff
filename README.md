@@ -91,8 +91,9 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
  ● main.go                 M│ 12 │   func main() {
  ✚ internal/new.go         A│ 13 │ -     run()
  ✖ old.txt                 D│ 13 │ +     run(ctx)
- BINARIES (1)               │ 14 │   }
- ◆ dist/app                B│  ⋮ 96 unchanged lines
+ ───────────────────────────│ 14 │   }
+ ◆ BINARIES  1              │  ⋮ 96 unchanged lines
+ ◆ dist/app                B│
                             │
  ───────────────────────────┴──────────────────────────────────────────
  ▒ flashdiff  /path    128 tracked  ·  3 changes  ·  ⧗ 2s  │  tab pane  / filter  ? help  q quit
@@ -110,12 +111,12 @@ the title rule (`┼`) and meets the status bar in a single `┴` joint.
   tracked-file count, total changes, time since the last change (`⧗`), and
   key hints.
 - **FILES** — changed text files first (newest first). Icons: `●` modified,
-  `✚` new, `✖` deleted. Binary changes are listed under a separate
-  `BINARIES (N)` section with `◆` / `B`. Rebuilds update that list but
-  **do not** auto-switch the DIFF pane; the right pane stays on the last
-  text selection until a new text change arrives (or you move the selection
-  manually). Editor/temp junk (`*.swp`, `*.tmp`, GNU `sed -i` temps, etc.)
-  is ignored by default.
+  `✚` new, `✖` deleted. When binary changes exist, a separate section appears
+  under a thin rule with a `◆ BINARIES  N` header (hidden entirely when there
+  are none). Rebuilds update that list but **do not** auto-switch the DIFF
+  pane; the right pane stays on the last text selection until a new text
+  change arrives (or you move the selection manually). Editor/temp junk
+  (`*.swp`, `*.tmp`, GNU `sed -i` temps, etc.) is ignored by default.
 - **DIFF** — the selected file's diff when it is text. Line numbers sit in
   their own gutter, separated from the content by a thin `│` rule. The
   diff mode and word granularity (`compact · words`) are right-aligned in

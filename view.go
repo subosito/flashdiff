@@ -191,6 +191,19 @@ func (m model) renderDiffPane(h int) string {
 
 // --- file list content ---
 
+// binarySectionChrome is the number of non-selectable rows rendered above
+// the binary file rows. Hidden entirely when there are no binaries.
+// With text above: blank spacer + header. Binary-only: header alone.
+func binarySectionChrome(textN, binsN int) int {
+	if binsN == 0 {
+		return 0
+	}
+	if textN > 0 {
+		return 2 // blank line + "BINARIES (n)"
+	}
+	return 1 // header only
+}
+
 func (m model) renderFileList(width int) string {
 	text := m.visibleTextChanges()
 	bins := m.visibleBinaryChanges()
@@ -203,8 +216,8 @@ func (m model) renderFileList(width int) string {
 	}
 
 	var b strings.Builder
-	// Flat selection index: text[0..n) then bins[0..m). A section header
-	// is rendered between the groups and is not selectable.
+	// Flat selection index: text[0..n) then bins[0..m). Section chrome
+	// (spacer + header) is not selectable and is omitted when bins==0.
 	idx := 0
 	for _, c := range text {
 		if idx > 0 {
@@ -214,10 +227,13 @@ func (m model) renderFileList(width int) string {
 		idx++
 	}
 	if len(bins) > 0 {
+		// Visual break from the text list when both sections are present.
 		if idx > 0 {
 			b.WriteByte('\n')
+			b.WriteString(m.st.rule.Render(strings.Repeat("─", max(1, width))))
+			b.WriteByte('\n')
 		}
-		label := fmt.Sprintf("BINARIES (%d)", len(bins))
+		label := fmt.Sprintf("◆ BINARIES  %d", len(bins))
 		b.WriteString(m.st.gutter.Render(padRight(label, width)))
 		for _, c := range bins {
 			b.WriteByte('\n')

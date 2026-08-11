@@ -430,12 +430,12 @@ func (m *model) ensureSelectionVisible() {
 	if m.selected < 0 {
 		return
 	}
-	// Visual row accounts for the non-selectable BINARIES header. The header
-	// is shown whenever any binary is listed (even if there is no text group).
+	// Visual row accounts for non-selectable binary-section chrome.
 	textN := len(m.visibleTextChanges())
+	binsN := len(m.visibleBinaryChanges())
 	visRow := m.selected
-	if len(m.visibleBinaryChanges()) > 0 && m.selected >= textN {
-		visRow = m.selected + 1
+	if binsN > 0 && m.selected >= textN {
+		visRow = m.selected + binarySectionChrome(textN, binsN)
 	}
 	if visRow < m.filesVP.YOffset() {
 		m.filesVP.SetYOffset(visRow)
@@ -595,17 +595,17 @@ func (m model) handleMouse(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			if msg.X < m.filesWidth && msg.Y >= 4 {
-				// Map viewport row -> selection index, skipping the
-				// non-selectable "BINARIES" header when present.
+				// Map viewport row -> selection index, skipping non-selectable
+				// binary-section chrome (rule + header) when present.
 				row := msg.Y - 4 + m.filesVP.YOffset()
 				textN := len(m.visibleTextChanges())
 				binsN := len(m.visibleBinaryChanges())
+				chrome := binarySectionChrome(textN, binsN)
 				sel := -1
 				if row >= 0 && row < textN {
 					sel = row
 				} else if binsN > 0 {
-					// text rows, then 1 header row, then binary rows
-					binRow := row - textN - 1
+					binRow := row - textN - chrome
 					if binRow >= 0 && binRow < binsN {
 						sel = textN + binRow
 					}

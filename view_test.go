@@ -211,10 +211,15 @@ func TestVisibleChangesSplitsBinary(t *testing.T) {
 		t.Fatalf("bin order wrong: %v %v", vis[2].rel, vis[3].rel)
 	}
 
-	// File list should contain a BINARIES header between groups.
+	// File list should contain a BINARIES header between groups, and stay
+	// hidden when there are no binaries.
 	out := stripANSI(m.renderFileList(40))
-	if !strings.Contains(out, "BINARIES (2)") {
-		t.Fatalf("missing BINARIES header: %q", out)
+	if !strings.Contains(out, "◆ BINARIES") {
+		t.Fatalf("expected ◆ BINARIES header: %q", out)
+	}
+	// Rule separator should appear when text + binaries are both present.
+	if !strings.Contains(out, "─") {
+		t.Fatalf("expected section rule above BINARIES: %q", out)
 	}
 	// Header should appear after text files and before binary names.
 	iText := strings.Index(out, "a.go")
@@ -222,6 +227,14 @@ func TestVisibleChangesSplitsBinary(t *testing.T) {
 	iBin := strings.Index(out, "bin")
 	if iText < 0 || iHdr <= iText || iBin <= iHdr {
 		t.Fatalf("expected text < header < binary order, got %d %d %d\n%s", iText, iHdr, iBin, out)
+	}
+
+	// Hidden by default when no binaries.
+	m2 := newTestModel()
+	m2.changes = []*change{{rel: "only.go", binary: false}}
+	out2 := stripANSI(m2.renderFileList(40))
+	if strings.Contains(out2, "BINARIES") {
+		t.Fatalf("BINARIES section must be hidden with no binaries: %q", out2)
 	}
 }
 
