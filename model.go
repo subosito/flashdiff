@@ -120,6 +120,9 @@ func newModel(cfg config) (model, error) {
 		return model{}, &os.PathError{Op: "watch", Path: cfg.path, Err: os.ErrInvalid}
 	}
 
+	if cfg.theme != "" {
+		ThemeName = cfg.theme
+	}
 	p := newPalette()
 	ign := newIgnoreSet(cfg.includes, cfg.excludes)
 	store := newFileStore()

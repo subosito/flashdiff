@@ -6,8 +6,29 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// ThemeName is the chroma style the palette is derived from.
-const ThemeName = "catppuccin-mocha"
+// ThemeName is the chroma style the palette and syntax highlighting are
+// derived from. Overridable via the --theme flag.
+var ThemeName = "catppuccin-mocha"
+
+// knownThemes lists the themes selectable via --theme. All are chroma
+// styles shipped with the chroma library, so the palette and syntax
+// highlighting stay in sync automatically.
+var knownThemes = map[string]bool{
+	"catppuccin-mocha":     true,
+	"catppuccin-macchiato": true,
+	"catppuccin-frappe":    true,
+	"catppuccin-latte":     true,
+	"dracula":              true,
+	"gruvbox":              true,
+	"monokai":              true,
+	"nord":                 true,
+	"solarized-dark":       true,
+	"solarized-light":      true,
+	"tokyonight-night":     true,
+	"tokyonight-storm":     true,
+	"onedark":              true,
+	"doom-one":             true,
+}
 
 // palette is the single source of truth for colors. It is derived from
 // the chroma catppuccin-mocha style so the TUI matches that theme.

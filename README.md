@@ -64,6 +64,7 @@ content.
 | `-i`, `--include` | Glob of files to include (repeatable), e.g. `-i '**/*.go'` |
 | `-e`, `--exclude` | Glob of files to exclude (repeatable) |
 | `--no-vcs` | Do not respect `.gitignore` / `.ignore` files |
+| `--theme` | Color theme (default: `catppuccin-mocha`) |
 | `--version` | Print version and exit |
 | `-h`, `--help` | Show help |
 
@@ -134,6 +135,32 @@ the title rule (`┼`) and meets the status bar in a single `┴` joint.
 
 The divider between panes is draggable, files can be clicked, and the mouse
 wheel scrolls whichever pane is under the cursor.
+
+## Themes
+
+flashdiff ships with several color themes, all derived from Chroma syntax
+styles so the UI palette and code highlighting stay in sync. The default is
+`catppuccin-mocha`.
+
+| Theme | Vibe |
+|-------|------|
+| `catppuccin-mocha` | warm dark *(default)* |
+| `catppuccin-macchiato` | slightly lighter dark |
+| `catppuccin-frappe` | muted dark |
+| `catppuccin-latte` | light |
+| `dracula` | classic dark purple |
+| `gruvbox` | warm earthy |
+| `monokai` | retro dark |
+| `nord` | cool blue-grey |
+| `solarized-dark` / `solarized-light` | balanced |
+| `tokyonight-night` / `tokyonight-storm` | modern blue |
+| `onedark` | clean dark |
+| `doom-one` | deep blue |
+
+```sh
+flashdiff --theme=dracula
+flashdiff --theme=gruvbox ~/code/myapp
+```
 
 ## Diff modes
 

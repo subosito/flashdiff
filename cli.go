@@ -19,6 +19,11 @@ Flags:
   -i, --include      glob of files to include (repeatable), e.g. -i '**/*.go'
   -e, --exclude      glob of files to exclude (repeatable)
       --no-vcs       do not respect .gitignore / .ignore files
+      --theme        color theme (default: catppuccin-mocha)
+                     catppuccin-mocha, catppuccin-macchiato, catppuccin-frappe,
+                     catppuccin-latte, dracula, gruvbox, monokai, nord,
+                     solarized-dark, solarized-light, tokyonight-night,
+                     tokyonight-storm, onedark, doom-one
       --version      print version and exit
   -h, --help         show this help
 
@@ -46,6 +51,7 @@ type config struct {
 	includes   []string
 	excludes   []string
 	respectVCS bool
+	theme      string
 }
 
 type strList []string
@@ -68,7 +74,9 @@ func parseArgs(args []string) (config, error) {
 	fs.Var(&excludes, "exclude", "exclude glob (repeatable)")
 
 	var noVCS, showVersion, help bool
+	var theme string
 	fs.BoolVar(&noVCS, "no-vcs", false, "ignore .gitignore files")
+	fs.StringVar(&theme, "theme", "catppuccin-mocha", "color theme (e.g. catppuccin-mocha, dracula, gruvbox, nord, monokai)")
 	fs.BoolVar(&showVersion, "version", false, "print version")
 	fs.BoolVar(&help, "h", false, "show help")
 	fs.BoolVar(&help, "help", false, "show help")
@@ -100,5 +108,9 @@ func parseArgs(args []string) (config, error) {
 	cfg.includes = includes
 	cfg.excludes = excludes
 	cfg.respectVCS = !noVCS
+	cfg.theme = theme
+	if !knownThemes[theme] {
+		return cfg, fmt.Errorf("unknown theme %q; see --help for available themes", theme)
+	}
 	return cfg, nil
 }
