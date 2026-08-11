@@ -91,8 +91,8 @@ flashdiff -e 'dist/**' -e '*.tmp' ./src
  ● main.go                 M│ 12 │   func main() {
  ✚ internal/new.go         A│ 13 │ -     run()
  ✖ old.txt                 D│ 13 │ +     run(ctx)
-                            │ 14 │   }
-                            │  ⋮ 96 unchanged lines
+ BINARIES (1)               │ 14 │   }
+ ◆ dist/app                B│  ⋮ 96 unchanged lines
                             │
  ───────────────────────────┴──────────────────────────────────────────
  ▒ flashdiff  /path    128 tracked  ·  3 changes  ·  ⧗ 2s  │  tab pane  / filter  ? help  q quit
@@ -109,13 +109,21 @@ the title rule (`┼`) and meets the status bar in a single `┴` joint.
   (the watcher is live) plus the brand and watched path; on the right, the
   tracked-file count, total changes, time since the last change (`⧗`), and
   key hints.
-- **FILES** — every changed file, newest first. Icons: `●` modified,
-  `✚` new, `✖` deleted, `◆` binary.
-- **DIFF** — the selected file's diff. Line numbers sit in their own gutter,
-  separated from the content by a thin `│` rule. The diff mode and word
-  granularity (`compact · words`) are right-aligned in the title. Additions
-  are green, deletions red, with word-level highlighting and Catppuccin
-  Mocha syntax highlighting on unchanged lines.
+- **FILES** — changed text files first (newest first). Icons: `●` modified,
+  `✚` new, `✖` deleted. Binary changes are listed under a separate
+  `BINARIES (N)` section with `◆` / `B`. Rebuilds update that list but
+  **do not** auto-switch the DIFF pane; the right pane stays on the last
+  text selection until a new text change arrives (or you move the selection
+  manually). Editor/temp junk (`*.swp`, `*.tmp`, GNU `sed -i` temps, etc.)
+  is ignored by default.
+- **DIFF** — the selected file's diff when it is text. Line numbers sit in
+  their own gutter, separated from the content by a thin `│` rule. The
+  diff mode and word granularity (`compact · words`) are right-aligned in
+  the title. Additions are green, deletions red, with word-level
+  highlighting and Catppuccin Mocha (or `--theme`) syntax highlighting on
+  unchanged lines. Selecting a binary shows a short status line
+  (`binary file rebuilt` / `new binary file` / `binary file removed`)
+  instead of a byte dump.
 
 ## Keybindings
 
@@ -124,7 +132,7 @@ the title rule (`┼`) and meets the status bar in a single `┴` joint.
 | `j` / `↓`, `k` / `↑` | Move file selection |
 | `tab` | Switch pane focus |
 | `enter` / `l` | Focus the diff pane |
-| `d` | Cycle diff mode: unified → compact → split |
+| `d` | Cycle diff mode: compact → unified → split |
 | `u` | Toggle word-level highlighting |
 | `/` | Filter the file list |
 | `g` / `G` | Jump to top / bottom |
@@ -175,18 +183,22 @@ highlighting, which marks the exact tokens that changed within a modified line.
 ## How it works
 
 1. **Baseline** — at startup, flashdiff walks the tree (honoring
-   `.gitignore`/`.ignore`, skip-lists, and your include/exclude globs) and
-   caches each file's content.
+   `.gitignore`/`.ignore`, default temp excludes, skip-lists, and your
+   include/exclude globs) and caches each file's content.
 2. **Watch** — a recursive `fsnotify` watcher streams events; rapid writes are
    debounced and batched.
 3. **Diff** — on each event the file is re-read (with a settle check so partial
-   writes don't corrupt the baseline), compared against the cached content with
-   a line-level diff, and the cache is updated.
-4. **Render** — the newest change floats to the top of the list and its diff is
-   shown, with word-level segments computed for paired changed lines.
+   writes don't corrupt the baseline). Text files are compared against the
+   cached content with a line-level (and optional word-level) diff and the
+   cache is updated. Binary / oversized files are recorded without a text
+   diff.
+4. **Render** — text changes float to the top of the FILES list and auto-
+   select so the DIFF pane follows source. Binary changes append under a
+   separate `BINARIES` segment and do **not** steal the DIFF pane. Word-level
+   segments are computed for paired changed lines.
 
-Binary files (NUL-byte heuristic) and files over 1 MiB are shown as a
-placeholder rather than diffed.
+Binary files (NUL-byte heuristic) and files over 1 MiB show a short status
+message (`binary file rebuilt`, etc.) when selected — never a byte dump.
 
 ## Development
 

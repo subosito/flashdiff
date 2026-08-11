@@ -78,7 +78,9 @@ type model struct {
 	ign     *ignoreSet
 	events  chan fileEventMsg
 
-	changes  []*change // newest first, one per file
+	changes []*change // newest first, one per file
+	// selected is an index into visibleChanges(), or -1 when nothing
+	// should drive the DIFF pane (e.g. only binary noise so far).
 	selected int
 	focus    pane
 	mode     diffMode
@@ -151,6 +153,7 @@ func newModel(cfg config) (model, error) {
 		hl:           newHighlighter(),
 		mode:         modeCompact,
 		wordDiff:     true,
+		selected:     -1,
 		totalScanned: len(snaps),
 		started:      time.Now(),
 		filesWidth:   30,
@@ -280,10 +283,10 @@ func (m *model) bumpEvent() {
 }
 
 // upsertChange inserts or replaces the entry for c.rel, keeping the
-// list newest-first. Text changes always become the selection so the live
-// diff stays on source. Binary changes only steal focus when nothing is
-// selected or the current selection is already a binary — they live in a
-// separate FILES segment and should not yank attention away from text.
+// list newest-first. Only text (diffable) changes auto-select and drive
+// the DIFF pane. Binary changes land in the BINARIES segment and never
+// steal focus or fill the right pane — selected stays on the last text
+// file (or -1) until the next text change or manual navigation.
 func (m *model) upsertChange(c *change) {
 	for i, ex := range m.changes {
 		if ex.rel == c.rel {
@@ -293,19 +296,34 @@ func (m *model) upsertChange(c *change) {
 	}
 	m.changes = append([]*change{c}, m.changes...)
 
-	cur := m.selectedChange()
-	steal := !c.binary || cur == nil || cur.binary
-	if steal {
+	if !c.binary {
 		for i, ex := range m.visibleChanges() {
 			if ex.rel == c.rel {
 				m.selected = i
 				break
 			}
 		}
-	} else if n := len(m.visibleChanges()); m.selected >= n {
-		m.selected = max(0, n-1)
+	} else {
+		// Keep DIFF on the previous text selection. If the old index is
+		// now out of range or points at a binary, fall back to the first
+		// text row, or -1 when there is no text change at all.
+		m.reanchorSelectionAfterBinary()
 	}
 	m.syncViews()
+}
+
+// reanchorSelectionAfterBinary keeps the DIFF pane on text content after
+// a binary list update. selected == -1 means "show the empty DIFF state".
+func (m *model) reanchorSelectionAfterBinary() {
+	textN := len(m.visibleTextChanges())
+	visN := len(m.visibleChanges())
+	if textN == 0 {
+		m.selected = -1
+		return
+	}
+	if m.selected < 0 || m.selected >= visN || m.selected >= textN {
+		m.selected = 0 // first text row (text is always listed first)
+	}
 }
 
 // matchFilter reports whether rel passes the current filter query.
@@ -356,7 +374,7 @@ func (m *model) visibleChanges() []*change {
 
 func (m *model) selectedChange() *change {
 	vis := m.visibleChanges()
-	if len(vis) == 0 || m.selected >= len(vis) {
+	if m.selected < 0 || len(vis) == 0 || m.selected >= len(vis) {
 		return nil
 	}
 	return vis[m.selected]
@@ -409,6 +427,9 @@ func (m *model) selectionChanged() {
 }
 
 func (m *model) ensureSelectionVisible() {
+	if m.selected < 0 {
+		return
+	}
 	// Visual row accounts for the non-selectable BINARIES header. The header
 	// is shown whenever any binary is listed (even if there is no text group).
 	textN := len(m.visibleTextChanges())
@@ -435,13 +456,18 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			m.filtering = false
 			m.filter.Blur()
 			m.filter.SetValue("")
-			m.selected = 0
+			m.selected = -1
 			m.syncViews()
 			return m, nil
 		}
 		var cmd tea.Cmd
 		m.filter, cmd = m.filter.Update(msg)
-		m.selected = 0
+		// Prefer first text match after filter edits; -1 if none.
+		if len(m.visibleTextChanges()) > 0 {
+			m.selected = 0
+		} else {
+			m.selected = -1
+		}
 		m.syncViews()
 		return m, cmd
 	}
@@ -493,7 +519,7 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	case key.Matches(msg, m.keys.Clear):
 		m.changes = nil
-		m.selected = 0
+		m.selected = -1
 		m.syncViews()
 		return m, nil
 
@@ -510,14 +536,23 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case key.Matches(msg, m.keys.Down):
-			if m.selected < len(m.visibleChanges())-1 {
+			n := len(m.visibleChanges())
+			if n == 0 {
+				return m, nil
+			}
+			if m.selected < 0 {
+				m.selected = 0
+				m.selectionChanged()
+			} else if m.selected < n-1 {
 				m.selected++
 				m.selectionChanged()
 			}
 			return m, nil
 		case key.Matches(msg, m.keys.Top):
-			m.selected = 0
-			m.selectionChanged()
+			if len(m.visibleChanges()) > 0 {
+				m.selected = 0
+				m.selectionChanged()
+			}
 			return m, nil
 		case key.Matches(msg, m.keys.Bottom):
 			if n := len(m.visibleChanges()); n > 0 {

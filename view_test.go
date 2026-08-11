@@ -227,17 +227,38 @@ func TestVisibleChangesSplitsBinary(t *testing.T) {
 
 func TestBinaryDoesNotStealTextSelection(t *testing.T) {
 	m := newTestModel()
+	m.selected = -1
 	m.upsertChange(&change{rel: "src.go", binary: false})
 	if m.selectedChange() == nil || m.selectedChange().rel != "src.go" {
 		t.Fatalf("expected src.go selected")
 	}
 	m.upsertChange(&change{rel: "out", binary: true})
-	// Text selection should stick.
+	// Text selection should stick; DIFF pane stays on src.go.
 	if c := m.selectedChange(); c == nil || c.rel != "src.go" {
 		t.Fatalf("binary stole selection: got %v", c)
 	}
-	// Binary still listed.
 	if len(m.visibleBinaryChanges()) != 1 {
 		t.Fatalf("expected 1 binary change")
+	}
+}
+
+func TestBinaryAloneDoesNotFillDiffPane(t *testing.T) {
+	// Binary-only noise must not auto-drive the DIFF pane.
+	m := newTestModel()
+	m.selected = -1
+	m.upsertChange(&change{rel: "a.bin", binary: true})
+	m.upsertChange(&change{rel: "b.bin", binary: true})
+	if c := m.selectedChange(); c != nil {
+		t.Fatalf("binary-only list must leave DIFF empty, got %v", c)
+	}
+	// First text change takes the pane.
+	m.upsertChange(&change{rel: "a.go", binary: false})
+	if c := m.selectedChange(); c == nil || c.rel != "a.go" || c.binary {
+		t.Fatalf("want a.go selected after text change, got %v", c)
+	}
+	// Later binaries still do not steal.
+	m.upsertChange(&change{rel: "c.bin", binary: true})
+	if c := m.selectedChange(); c == nil || c.rel != "a.go" {
+		t.Fatalf("binary stole after text: got %v", c)
 	}
 }
