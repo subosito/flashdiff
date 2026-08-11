@@ -251,12 +251,11 @@ func (m *model) applyFileEvent(ev fileEventMsg) {
 		}
 		return
 	}
-	// Skip binary files: they aren't diffable and would only add noise.
-	if binary {
-		return
-	}
 	old, existed := m.store.get(ev.rel)
-	if existed && old.binary == binary && old.content == content {
+	// Binary files have no stored content (always ""), so comparing
+	// content would suppress all binary changes. Treat any event as a
+	// real change when either side is binary.
+	if existed && !binary && old.binary == binary && old.content == content {
 		return // no effective change (e.g. touch with same content)
 	}
 	m.store.put(ev.rel, snapshot{content: content, binary: binary})

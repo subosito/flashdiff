@@ -169,7 +169,13 @@ type diffRow struct {
 func renderUnified(d fileDiff, wordDiff bool) []diffRow {
 	var rows []diffRow
 	if d.binary {
-		return append(rows, diffRow{op: opContext, text: "binary file changed", gutter: true})
+		msg := "binary file rebuilt"
+		if d.isNew {
+			msg = "new binary file"
+		} else if d.isDel {
+			msg = "binary file removed"
+		}
+		return append(rows, diffRow{op: opContext, text: msg, gutter: true})
 	}
 	if d.isNew {
 		rows = append(rows, diffRow{op: opAdd, text: "new file", gutter: true})
@@ -217,7 +223,13 @@ type splitCell struct {
 func renderSplit(d fileDiff, wordDiff bool) [][2]*splitCell {
 	var rows [][2]*splitCell
 	if d.binary {
-		return [][2]*splitCell{{{op: opContext, text: "binary file changed"}, nil}}
+		msg := "binary file rebuilt"
+		if d.isNew {
+			msg = "new binary file"
+		} else if d.isDel {
+			msg = "binary file removed"
+		}
+		return [][2]*splitCell{{{op: opContext, text: msg}, nil}}
 	}
 	var dels, adds []diffLine
 	flush := func() {
