@@ -39,6 +39,20 @@ syntax highlighting for unchanged lines in the diff view.
 go install github.com/subosito/flashdiff@latest
 ```
 
+### Nix
+
+```sh
+# run without installing
+nix run github:subosito/flashdiff
+
+# install into your profile
+nix profile install github:subosito/flashdiff
+
+# from a local checkout
+nix build
+./result/bin/flashdiff --version
+```
+
 Or build from source:
 
 ```sh
