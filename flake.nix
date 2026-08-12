@@ -21,13 +21,34 @@
         go = pkgs.go_1_25 or pkgs.go;
         buildGo = pkgs.buildGoModule.override { inherit go; };
 
+        # Keep in sync with the latest git release tag (without the "v" prefix).
+        # Flakes cannot read git tags purely, so this is the source of truth for
+        # Nix package metadata and the -ldflags version string.
+        releaseVersion = "0.2.1";
+
+        # Unique Nix drv version: release + short rev when available.
+        packageVersion =
+          if self ? shortRev then
+            "${releaseVersion}+${self.shortRev}"
+          else if self ? dirtyShortRev then
+            "${releaseVersion}+${self.dirtyShortRev}"
+          else
+            "${releaseVersion}-dev";
+
+        # What `flashdiff --version` prints (matches goreleaser-style v-prefixed tags).
+        versionString =
+          if self ? shortRev then
+            "v${releaseVersion}+${self.shortRev}"
+          else if self ? dirtyShortRev then
+            "v${releaseVersion}+${self.dirtyShortRev}"
+          else
+            "v${releaseVersion}-dev";
+
+        commitString = self.rev or self.dirtyRev or "unknown";
+
         flashdiff = buildGo {
           pname = "flashdiff";
-          version =
-            let
-              rev = self.shortRev or self.dirtyShortRev or "dev";
-            in
-            "0.1.0+${rev}";
+          version = packageVersion;
 
           src = pkgs.lib.cleanSourceWith {
             src = ./.;
@@ -55,8 +76,8 @@
           ldflags = [
             "-s"
             "-w"
-            "-X main.version=${if self ? rev then "git-${self.shortRev}" else "dev"}"
-            "-X main.commit=${self.rev or "unknown"}"
+            "-X main.version=${versionString}"
+            "-X main.commit=${commitString}"
             "-X main.date=unknown"
           ];
 
