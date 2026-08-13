@@ -12,9 +12,12 @@ import (
 func (m model) View() tea.View {
 	content := "starting…"
 	if m.ready {
-		body := m.renderBody()
+		// Fixed-height frame: body fills height-chromeH, status is always the
+		// last two rows. Long diffs scroll inside the viewport; they must not
+		// push the status bar off-screen.
+		body := m.fitHeight(m.renderBody(), m.bodyHeight())
 		status := m.renderStatusBar()
-		content = lipgloss.JoinVertical(lipgloss.Left, body, status)
+		content = body + "\n" + status
 		if m.showHelp {
 			content = m.renderHelpOverlay(content)
 		}
@@ -24,6 +27,33 @@ func (m model) View() tea.View {
 	// Enable mouse cell motion so drag/click/wheel work like v1 WithMouseCellMotion.
 	v.MouseMode = tea.MouseModeCellMotion
 	return v
+}
+
+// chromeHeight is the reserved bottom status bar (top rule + text row).
+const chromeHeight = 2
+
+func (m model) bodyHeight() int {
+	h := m.height - chromeHeight
+	if h < 3 {
+		return 3
+	}
+	return h
+}
+
+// fitHeight pads or crops s to exactly h lines so JoinVertical layouts never
+// overflow the terminal and scroll the status bar away.
+func (m model) fitHeight(s string, h int) string {
+	if h < 1 {
+		return ""
+	}
+	lines := strings.Split(s, "\n")
+	if len(lines) > h {
+		lines = lines[:h]
+	}
+	for len(lines) < h {
+		lines = append(lines, "")
+	}
+	return strings.Join(lines, "\n")
 }
 
 // renderStatusBar is the single bottom chrome line: brand + path on the
@@ -59,34 +89,48 @@ func (m model) renderStatusBar() string {
 		right += m.st.headerPath.Render("  │  ") + m.renderKeyHints()
 	}
 
+	// Build a single-line status that never wraps: truncating the right
+	// side first, then the left, so the footer stays exactly chromeHeight
+	// rows and long diffs cannot push it off-screen.
+	inner := max(1, m.width-2) // header Padding(0,1)
 	leftW := lipgloss.Width(left)
 	rightW := lipgloss.Width(right)
-	inner := m.width - 2 // account for header padding
 	if leftW+rightW+1 > inner {
-		// Too wide: drop the root path, keep just the brand.
 		left = m.spinner.View() + m.st.headerBrand.Render(" flashdiff")
 		leftW = lipgloss.Width(left)
 	}
 	if leftW+rightW+1 > inner {
-		// Still too wide: drop key hints / extra stats from the right.
 		right = strings.Join(rightParts, sep)
+		rightW = lipgloss.Width(right)
+	}
+	if leftW+rightW+1 > inner {
+		// Last resort: keep brand only on the left; trim right to fit.
+		budget := max(0, inner-leftW-1)
+		right = truncate(right, budget)
 		rightW = lipgloss.Width(right)
 	}
 	gap := inner - leftW - rightW
 	if gap < 1 {
 		gap = 1
 	}
+	// Clamp total inner width so header padding cannot make the line wrap.
 	line := left + strings.Repeat(" ", gap) + right
+	if lipgloss.Width(line) > inner {
+		line = truncate(line, inner)
+	}
 
 	// Top rule separating the status bar from the body, with a ┴ junction
 	// where the vertical divider meets it so the two read as one joint.
-	rule := []rune(strings.Repeat("─", m.width))
+	ruleW := max(1, m.width)
+	rule := []rune(strings.Repeat("─", ruleW))
 	if m.filesWidth >= 0 && m.filesWidth < len(rule) {
 		rule[m.filesWidth] = '┴'
 	}
 	ruleLine := lipgloss.NewStyle().Foreground(m.st.p.border).Render(string(rule))
 
-	return ruleLine + "\n" + m.st.header.Render(line)
+	// Header style adds horizontal padding; width must be exact terminal width.
+	statusLine := m.st.header.Width(m.width).MaxHeight(1).Render(line)
+	return ruleLine + "\n" + statusLine
 }
 
 // styledStat colors a stat value with the primary color.
@@ -110,13 +154,8 @@ func (m model) renderKeyHints() string {
 // --- body ---
 
 func (m model) renderBody() string {
-	// Chrome: the bottom status bar is 2 rows (its top-border rule + the
-	// status text). Everything above that is body.
-	const chromeH = 2
-	bodyH := m.height - chromeH
-	if bodyH < 3 {
-		bodyH = 3
-	}
+	// Everything above the reserved status bar is body.
+	bodyH := m.bodyHeight()
 
 	filesPane := m.renderFilesPane(bodyH)
 	diffPane := m.renderDiffPane(bodyH)

@@ -385,8 +385,7 @@ func (m *model) layout() {
 	if !m.ready {
 		return
 	}
-	const chromeH = 2 // bottom status bar (rule + text)
-	bodyH := m.height - chromeH
+	bodyH := m.height - chromeHeight
 	if bodyH < 3 {
 		bodyH = 3
 	}
