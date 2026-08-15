@@ -482,33 +482,145 @@ func (m model) renderCellText(cell *splitCell, lineSt, wordSt lipgloss.Style, te
 // --- help overlay ---
 
 func (m model) renderHelpOverlay(bg string) string {
-	// Full-screen solid backdrop + fully opaque help card. Help bubble styles
-	// previously had no Background, so key/desc cells kept darker terminal
-	// defaults and looked like holes inside a brighter card frame.
+	// Draw the help card ourselves (border + padded interior). lipgloss
+	// top/bottom Padding inserts bare "\n" with no background, which shows
+	// up as darker bands; bubbles FullHelpView also leaves unpainted gaps
+	// between key and description columns. Every interior cell here is an
+	// explicit surface-coloured rune.
 	_ = bg
 	w, h := max(1, m.width), max(1, m.height)
 	p := m.st.p
 
+	body := m.renderHelpBody()
+	innerW := max(lipgloss.Width(body), 36)
+
+	surf := lipgloss.NewStyle().Background(p.surface)
+	fill := func(s string) string {
+		return surf.Width(innerW).MaxHeight(1).Render(s)
+	}
+	blank := fill(" ")
 	title := lipgloss.NewStyle().
-		Foreground(p.primary).
-		Background(p.surface).
-		Bold(true).
-		Render("flashdiff — keys")
-	body := lipgloss.NewStyle().
-		Background(p.surface).
-		Render(m.help.FullHelpView(m.keys.FullHelp()))
+		Foreground(p.primary).Background(p.surface).Bold(true).
+		Width(innerW).Render("flashdiff — keys")
+	// Ensure body rows span innerW.
+	var bodyLines []string
+	for _, ln := range strings.Split(body, "\n") {
+		if pad := innerW - lipgloss.Width(ln); pad > 0 {
+			ln += surf.Render(strings.Repeat(" ", pad))
+		}
+		bodyLines = append(bodyLines, ln)
+	}
+	body = strings.Join(bodyLines, "\n")
 	hint := lipgloss.NewStyle().
-		Foreground(p.muted).
-		Background(p.surface).
-		Italic(true).
-		Render("esc / ? to close")
-	card := m.st.helpOverlay.Render(title + "\n\n" + body + "\n\n" + hint)
+		Foreground(p.muted).Background(p.surface).Italic(true).
+		Width(innerW).Render("esc / ? to close")
+
+	// Vertical pad (1) as painted blank rows — not style Padding.
+	inner := strings.Join([]string{blank, title, blank, body, blank, hint, blank}, "\n")
+
+	// Horizontal pad (2) as painted spaces on every row.
+	var padded []string
+	side := surf.Render("  ")
+	for _, ln := range strings.Split(inner, "\n") {
+		padded = append(padded, side+ln+side)
+	}
+	contentW := innerW + 4 // +2 side pads each edge
+	content := strings.Join(padded, "\n")
+
+	// Rounded border with surface fill on border runes.
+	borderFg := lipgloss.NewStyle().Foreground(p.primary).Background(p.surface)
+	top := borderFg.Render("╭" + strings.Repeat("─", contentW) + "╮")
+	bot := borderFg.Render("╰" + strings.Repeat("─", contentW) + "╯")
+	var boxed []string
+	boxed = append(boxed, top)
+	for _, ln := range strings.Split(content, "\n") {
+		boxed = append(boxed, borderFg.Render("│")+ln+borderFg.Render("│"))
+	}
+	boxed = append(boxed, bot)
+	card := strings.Join(boxed, "\n")
 
 	ws := lipgloss.NewStyle().Background(p.bg)
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, card,
 		lipgloss.WithWhitespaceStyle(ws),
 		lipgloss.WithWhitespaceChars(" "),
 	)
+}
+
+// renderHelpBody lays out FullHelp bindings in columns. Every gap (key↔desc,
+// between columns, row tail) is an explicit surface-coloured space.
+func (m model) renderHelpBody() string {
+	p := m.st.p
+	keySt := lipgloss.NewStyle().Foreground(p.primary).Background(p.surface).Bold(true)
+	descSt := lipgloss.NewStyle().Foreground(p.muted).Background(p.surface)
+	gapSt := lipgloss.NewStyle().Background(p.surface)
+
+	type col struct{ keys, descs []string }
+	var cols []col
+	for _, g := range m.keys.FullHelp() {
+		var c col
+		for _, b := range g {
+			if !b.Enabled() {
+				continue
+			}
+			c.keys = append(c.keys, b.Help().Key)
+			c.descs = append(c.descs, b.Help().Desc)
+		}
+		if len(c.keys) > 0 {
+			cols = append(cols, c)
+		}
+	}
+	if len(cols) == 0 {
+		return ""
+	}
+
+	keyW := make([]int, len(cols))
+	descW := make([]int, len(cols))
+	rows := 0
+	for i, c := range cols {
+		for _, k := range c.keys {
+			if n := lipgloss.Width(k); n > keyW[i] {
+				keyW[i] = n
+			}
+		}
+		for _, d := range c.descs {
+			if n := lipgloss.Width(d); n > descW[i] {
+				descW[i] = n
+			}
+		}
+		if len(c.keys) > rows {
+			rows = len(c.keys)
+		}
+	}
+
+	var lines []string
+	for r := 0; r < rows; r++ {
+		var b strings.Builder
+		for i, c := range cols {
+			if i > 0 {
+				b.WriteString(gapSt.Render("  "))
+			}
+			k, d := "", ""
+			if r < len(c.keys) {
+				k, d = c.keys[r], c.descs[r]
+			}
+			b.WriteString(keySt.Render(padRight(k, keyW[i])))
+			b.WriteString(gapSt.Render("  "))
+			b.WriteString(descSt.Render(padRight(d, descW[i])))
+		}
+		lines = append(lines, b.String())
+	}
+	maxW := 0
+	for _, ln := range lines {
+		if n := lipgloss.Width(ln); n > maxW {
+			maxW = n
+		}
+	}
+	for i, ln := range lines {
+		if pad := maxW - lipgloss.Width(ln); pad > 0 {
+			lines[i] = ln + gapSt.Render(strings.Repeat(" ", pad))
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 func max(a, b int) int {
