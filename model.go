@@ -12,6 +12,7 @@ import (
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/bubbles/v2/viewport"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 type pane int
@@ -162,6 +163,14 @@ func newModel(cfg config) (model, error) {
 	m.help.Styles.ShortKey = m.st.footerKey
 	m.help.Styles.ShortDesc = m.st.footerDesc
 	m.help.Styles.ShortSeparator = m.st.footerDesc
+	// Full-help styles must paint a solid surface background. Without it,
+	// key/desc cells are transparent and the overlay looks patchy (dark holes
+	// inside a brighter card).
+	surf := m.st.p.surface
+	m.help.Styles.FullKey = lipgloss.NewStyle().Foreground(m.st.p.primary).Background(surf).Bold(true)
+	m.help.Styles.FullDesc = lipgloss.NewStyle().Foreground(m.st.p.muted).Background(surf)
+	m.help.Styles.FullSeparator = lipgloss.NewStyle().Foreground(m.st.p.border).Background(surf)
+	m.help.Styles.Ellipsis = lipgloss.NewStyle().Foreground(m.st.p.muted).Background(surf)
 
 	// A small "pulse" spinner signals that the watcher is live. It sits in
 	// the status bar where the static brand icon used to be. The default FPS

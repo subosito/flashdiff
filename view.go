@@ -482,25 +482,29 @@ func (m model) renderCellText(cell *splitCell, lineSt, wordSt lipgloss.Style, te
 // --- help overlay ---
 
 func (m model) renderHelpOverlay(bg string) string {
-	// Center a solid help card on a full-screen theme background. Place fills
-	// the unused area with styled whitespace so the overlay is opaque.
-	w, h := max(1, m.width), max(1, m.height)
+	// Full-screen solid backdrop + fully opaque help card. Help bubble styles
+	// previously had no Background, so key/desc cells kept darker terminal
+	// defaults and looked like holes inside a brighter card frame.
 	_ = bg
+	w, h := max(1, m.width), max(1, m.height)
+	p := m.st.p
 
 	title := lipgloss.NewStyle().
-		Foreground(m.st.p.primary).
-		Background(m.st.p.surface).
+		Foreground(p.primary).
+		Background(p.surface).
 		Bold(true).
 		Render("flashdiff — keys")
-	body := m.help.FullHelpView(m.keys.FullHelp())
+	body := lipgloss.NewStyle().
+		Background(p.surface).
+		Render(m.help.FullHelpView(m.keys.FullHelp()))
 	hint := lipgloss.NewStyle().
-		Foreground(m.st.p.muted).
-		Background(m.st.p.surface).
+		Foreground(p.muted).
+		Background(p.surface).
 		Italic(true).
 		Render("esc / ? to close")
 	card := m.st.helpOverlay.Render(title + "\n\n" + body + "\n\n" + hint)
 
-	ws := lipgloss.NewStyle().Background(m.st.p.bg)
+	ws := lipgloss.NewStyle().Background(p.bg)
 	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, card,
 		lipgloss.WithWhitespaceStyle(ws),
 		lipgloss.WithWhitespaceChars(" "),
