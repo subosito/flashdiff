@@ -5,6 +5,7 @@ project_name: flashdiff
 before:
   hooks:
     - go mod tidy
+    # VERSION is embedded and read by flake.nix; keep tags aligned with it.
 
 builds:
   - id: flashdiff

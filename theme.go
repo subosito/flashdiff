@@ -66,6 +66,20 @@ func chromaBg(st *chroma.Style, def string) color.Color {
 	return lipgloss.Color(def)
 }
 
+// contrastSurface picks a card/overlay surface that stays readable against bg.
+// Dark themes use a lifted surface0; light themes shade the panel slightly.
+func contrastSurface(bg color.Color) color.Color {
+	r16, g16, b16, _ := bg.RGBA()
+	rf, gf, bf := float64(r16)/65535.0, float64(g16)/65535.0, float64(b16)/65535.0
+	lum := 0.2126*rf + 0.7152*gf + 0.0722*bf
+	if lum > 0.55 {
+		// Light background: fixed soft panel that stays darker than paper white.
+		return lipgloss.Color("#ccd0da")
+	}
+	// Dark background: Catppuccin-like surface0 (works across mocha/dracula/nord).
+	return lipgloss.Color("#313244")
+}
+
 func newPalette() palette {
 	st := chromastyles.Get(ThemeName)
 	// Derived from the chroma catppuccin-mocha style tokens; the
@@ -73,7 +87,7 @@ func newPalette() palette {
 	bg := chromaBg(st, "#1e1e2e") // base
 	return palette{
 		bg:       bg,
-		surface:  lipgloss.Color("#313244"),                          // surface0
+		surface:  contrastSurface(bg),
 		border:   lipgloss.Color("#45475a"),                          // surface1
 		borderHi: lipgloss.Color("#585b70"),                          // surface2
 		primary:  chromaColor(st, chroma.NameFunction, "#89b4fa"),    // blue

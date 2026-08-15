@@ -48,3 +48,9 @@ Bug reports and feature ideas are welcome as
 [issues](https://github.com/subosito/flashdiff/issues). A short description of
 the behaviour you expected vs. what you saw (plus your OS and `flashdiff
 --version`) is usually enough to get started.
+
+## Releases
+
+Version is defined in the root [`VERSION`](VERSION) file (bare semver, no `v`).
+When cutting a release, bump that file and tag `v` + the same number. The Nix
+flake and the embedded `--version` output both read it.

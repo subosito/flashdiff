@@ -21,10 +21,9 @@
         go = pkgs.go_1_25 or pkgs.go;
         buildGo = pkgs.buildGoModule.override { inherit go; };
 
-        # Keep in sync with the latest git release tag (without the "v" prefix).
-        # Flakes cannot read git tags purely, so this is the source of truth for
-        # Nix package metadata and the -ldflags version string.
-        releaseVersion = "0.2.1";
+        # Single source of truth: ./VERSION (same file Go embeds). Bump VERSION
+        # when cutting a release tag (vX.Y.Z → VERSION contains X.Y.Z).
+        releaseVersion = pkgs.lib.removeSuffix "\n" (builtins.readFile ./VERSION);
 
         # Unique Nix drv version: release + short rev when available.
         packageVersion =

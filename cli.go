@@ -90,6 +90,7 @@ func parseArgs(args []string) (config, error) {
 		os.Exit(0)
 	}
 	if showVersion {
+		applyBuildIdentity()
 		fmt.Printf("flashdiff %s\n", version)
 		if commit != "" {
 			fmt.Printf("  commit: %s\n", commit)

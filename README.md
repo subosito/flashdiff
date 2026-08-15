@@ -225,11 +225,22 @@ go build ./...   # build
 go test ./...    # tests
 go vet ./...     # vet
 gofmt -l .       # should print nothing
+./flashdiff --version   # reads VERSION (and VCS info when available)
 ```
 
 `devenv.nix` is provided for contributors who use [devenv](https://devenv.sh),
-but it is entirely optional. Releases are built with
-[GoReleaser](https://goreleaser.com) from git tags.
+but it is entirely optional. Local day-to-day work uses devenv; **Nix packaging**
+is flake-only (`flake.nix`).
+
+### Releases
+
+1. Bump the bare semver in [`VERSION`](VERSION) (no `v` prefix), e.g. `0.2.2`.
+2. Commit, tag `v` + that version (`git tag v0.2.2`), and push the tag.
+3. GoReleaser (GitHub Actions) builds binaries and injects `main.version` via ldflags.
+4. `flake.nix` reads `VERSION` automatically for `nix build` / `nix run`.
+
+Keep the git tag and `VERSION` aligned — that file is the single source of truth
+for both the embedded binary identity and the Nix package version.
 
 ## Dependency note
 

@@ -66,7 +66,7 @@ func newKeyMap() keyMap {
 			key.WithHelp("c", "clear"),
 		),
 		CompactFiles: key.NewBinding(
-			key.WithKeys("\\", "|"),
+			key.WithKeys("\\"),
 			key.WithHelp("\\", "icons"),
 		),
 		Help: key.NewBinding(
