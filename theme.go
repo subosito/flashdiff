@@ -201,6 +201,7 @@ func newStyles(p palette) styles {
 			Background(p.surface).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(p.primary).
+			BorderBackground(p.surface).
 			Padding(1, 2),
 		helpKey: lipgloss.NewStyle().
 			Foreground(p.primary).

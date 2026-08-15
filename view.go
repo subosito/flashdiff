@@ -177,15 +177,22 @@ func (m model) renderBody() string {
 
 func (m model) renderFilesPane(h int) string {
 	label := "FILES"
-	if q := m.filter.Value(); q != "" {
+	if m.compactFiles {
+		label = "≡"
+	} else if q := m.filter.Value(); q != "" {
 		label += m.st.stats.Render(fmt.Sprintf(" (%d/%d)", len(m.visibleChanges()), len(m.changes)))
 	}
 	labelSt, ruleSt := m.st.paneTitle, m.st.rule
 	if m.focus == paneFiles {
 		labelSt, ruleSt = m.st.paneTitleOn, m.st.ruleActive
 	}
-	title := labelSt.Render(label)
-	rule := ruleSt.Render(strings.Repeat("─", m.filesWidth))
+	var title string
+	if m.compactFiles {
+		title = labelSt.Width(m.filesWidth).Align(lipgloss.Center).Render(label)
+	} else {
+		title = labelSt.Render(label)
+	}
+	rule := ruleSt.Render(strings.Repeat("─", max(1, m.filesWidth)))
 	return lipgloss.JoinVertical(lipgloss.Left, title, rule, m.filesVP.View())
 }
 
@@ -247,6 +254,10 @@ func (m model) renderFileList(width int) string {
 	text := m.visibleTextChanges()
 	bins := m.visibleBinaryChanges()
 	if len(text) == 0 && len(bins) == 0 {
+		if m.compactFiles {
+			// Tiny sidebar: a single calm glyph, no wrapped prose.
+			return m.st.empty.Width(width).Align(lipgloss.Center).Render("◌")
+		}
 		msg := "◌ watching for changes…"
 		if m.filter.Value() != "" {
 			msg = "no files match the filter"
@@ -272,8 +283,12 @@ func (m model) renderFileList(width int) string {
 			b.WriteString(m.st.rule.Render(strings.Repeat("─", max(1, width))))
 			b.WriteByte('\n')
 		}
-		label := fmt.Sprintf("◆ BINARIES  %d", len(bins))
-		b.WriteString(m.st.gutter.Render(padRight(label, width)))
+		if m.compactFiles {
+			b.WriteString(m.st.gutter.Width(width).Align(lipgloss.Center).Render("·"))
+		} else {
+			label := fmt.Sprintf("◆ BINARIES  %d", len(bins))
+			b.WriteString(m.st.gutter.Render(padRight(label, width)))
+		}
 		for _, c := range bins {
 			b.WriteByte('\n')
 			b.WriteString(m.renderFileRow(c, idx == m.selected, width))
@@ -296,12 +311,13 @@ func (m model) renderFileRow(c *change, selected bool, width int) string {
 	if selected {
 		st = m.st.fileRowSel
 	}
+	if m.compactFiles {
+		return st.Width(width).Align(lipgloss.Center).Render(icon)
+	}
 	name := truncate(c.rel, max(6, width-4))
 	row := padRight(icon+" "+name, width-1) + m.st.gutter.Render(badge)
 	return st.Render(row)
 }
-
-// --- diff content ---
 
 func (m model) renderDiff(width int) string {
 	c := m.selectedChange()
@@ -466,10 +482,29 @@ func (m model) renderCellText(cell *splitCell, lineSt, wordSt lipgloss.Style, te
 // --- help overlay ---
 
 func (m model) renderHelpOverlay(bg string) string {
-	title := lipgloss.NewStyle().Foreground(m.st.p.primary).Bold(true).Render("flashdiff — keys")
+	// Center a solid help card on a full-screen theme background. Place fills
+	// the unused area with styled whitespace so the overlay is opaque.
+	w, h := max(1, m.width), max(1, m.height)
+	_ = bg
+
+	title := lipgloss.NewStyle().
+		Foreground(m.st.p.primary).
+		Background(m.st.p.surface).
+		Bold(true).
+		Render("flashdiff — keys")
 	body := m.help.FullHelpView(m.keys.FullHelp())
-	box := m.st.helpOverlay.Render(title + "\n\n" + body + "\n\n" + m.st.empty.Render("esc to close"))
-	return lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, box)
+	hint := lipgloss.NewStyle().
+		Foreground(m.st.p.muted).
+		Background(m.st.p.surface).
+		Italic(true).
+		Render("esc / ? to close")
+	card := m.st.helpOverlay.Render(title + "\n\n" + body + "\n\n" + hint)
+
+	ws := lipgloss.NewStyle().Background(m.st.p.bg)
+	return lipgloss.Place(w, h, lipgloss.Center, lipgloss.Center, card,
+		lipgloss.WithWhitespaceStyle(ws),
+		lipgloss.WithWhitespaceChars(" "),
+	)
 }
 
 func max(a, b int) int {

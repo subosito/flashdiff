@@ -3,19 +3,20 @@ package main
 import "charm.land/bubbles/v2/key"
 
 type keyMap struct {
-	Up       key.Binding
-	Down     key.Binding
-	Top      key.Binding
-	Bottom   key.Binding
-	Tab      key.Binding
-	Enter    key.Binding
-	Mode     key.Binding
-	WordDiff key.Binding
-	Filter   key.Binding
-	Rescan   key.Binding
-	Clear    key.Binding
-	Help     key.Binding
-	Quit     key.Binding
+	Up           key.Binding
+	Down         key.Binding
+	Top          key.Binding
+	Bottom       key.Binding
+	Tab          key.Binding
+	Enter        key.Binding
+	Mode         key.Binding
+	WordDiff     key.Binding
+	Filter       key.Binding
+	Rescan       key.Binding
+	Clear        key.Binding
+	CompactFiles key.Binding
+	Help         key.Binding
+	Quit         key.Binding
 }
 
 func newKeyMap() keyMap {
@@ -64,6 +65,10 @@ func newKeyMap() keyMap {
 			key.WithKeys("c"),
 			key.WithHelp("c", "clear"),
 		),
+		CompactFiles: key.NewBinding(
+			key.WithKeys("\\", "|"),
+			key.WithHelp("\\", "icons"),
+		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
 			key.WithHelp("?", "help"),
@@ -84,7 +89,7 @@ func (k keyMap) ShortHelp() []key.Binding {
 func (k keyMap) FullHelp() [][]key.Binding {
 	return [][]key.Binding{
 		{k.Up, k.Down, k.Top, k.Bottom, k.Tab, k.Enter},
-		{k.Mode, k.WordDiff, k.Filter, k.Rescan, k.Clear},
+		{k.Mode, k.WordDiff, k.Filter, k.CompactFiles, k.Rescan, k.Clear},
 		{k.Help, k.Quit},
 	}
 }

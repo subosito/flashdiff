@@ -153,6 +153,7 @@ the title rule (`┼`) and meets the status bar in a single `┴` joint.
 | `g` / `G` | Jump to top / bottom |
 | `r` | Rescan the watched tree |
 | `c` | Clear change history |
+| `\\` | Toggle icon-only FILES sidebar |
 | `?` | Toggle help |
 | `q` / `ctrl+c` | Quit |
 

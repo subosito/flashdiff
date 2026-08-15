@@ -32,8 +32,8 @@ Keys:
   tab                cycle panes              d            cycle diff mode
   u                  toggle word diff         /            filter files
   g/G                top / bottom             r            rescan
-  c                  clear history            ?            help
-  q                  quit
+  c                  clear history            \\            icon sidebar
+  ?                  help                     q            quit
 `
 
 // Build metadata, injected via -ldflags at release time (see .goreleaser.yaml).

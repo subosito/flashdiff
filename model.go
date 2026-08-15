@@ -81,10 +81,11 @@ type model struct {
 	changes []*change // newest first, one per file
 	// selected is an index into visibleChanges(), or -1 when nothing
 	// should drive the DIFF pane (e.g. only binary noise so far).
-	selected int
-	focus    pane
-	mode     diffMode
-	wordDiff bool
+	selected     int
+	focus        pane
+	mode         diffMode
+	wordDiff     bool
+	compactFiles bool // \\ toggles icon-only FILES sidebar
 
 	filesVP viewport.Model
 	diffVP  viewport.Model
@@ -389,11 +390,15 @@ func (m *model) layout() {
 	if bodyH < 3 {
 		bodyH = 3
 	}
-	if m.filesWidth < 18 {
-		m.filesWidth = 18
-	}
-	if maxFiles := m.width * 45 / 100; m.filesWidth > maxFiles {
-		m.filesWidth = maxFiles
+	if m.compactFiles {
+		m.filesWidth = 4 // icon-only sidebar
+	} else {
+		if m.filesWidth < 18 {
+			m.filesWidth = 18
+		}
+		if maxFiles := m.width * 45 / 100; m.filesWidth > maxFiles {
+			m.filesWidth = maxFiles
+		}
 	}
 	diffW := m.width - m.filesWidth - 1 // 1-col divider
 	if diffW < 20 {
@@ -487,7 +492,7 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 
 	case key.Matches(msg, m.keys.Help):
-		m.showHelp = true
+		m.showHelp = !m.showHelp
 		return m, nil
 
 	case key.Matches(msg, m.keys.Tab):
@@ -510,6 +515,14 @@ func (m model) handleKey(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	case key.Matches(msg, m.keys.WordDiff):
 		m.wordDiff = !m.wordDiff
 		m.syncViews()
+		return m, nil
+
+	case key.Matches(msg, m.keys.CompactFiles):
+		m.compactFiles = !m.compactFiles
+		if !m.compactFiles && m.filesWidth < 18 {
+			m.filesWidth = 30
+		}
+		m.layout()
 		return m, nil
 
 	case key.Matches(msg, m.keys.Filter):
